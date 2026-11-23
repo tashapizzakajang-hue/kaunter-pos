@@ -68,7 +68,16 @@ Pada peranti yang sudah bersambung, pergi ke **Tetapan → Sambungan Google Shee
 
 Pautan ini mengandungi URL skrip dan PIN, jadi hantar hanya kepada pekerja kedai anda. Jika pautan terlepas ke orang lain, tukar PIN dalam skrip dan buat **New version** (lihat di bawah).
 
-Tip: pada tablet atau telefon, buka menu pelayar dan pilih **Add to Home screen** supaya kaunter dibuka seperti aplikasi.
+### 4. Pasang sebagai aplikasi di Android
+
+1. Hantar pautan persediaan ke peranti Android. Buka pautan itu dalam **Chrome**, bukan dalam WhatsApp atau aplikasi lain. Jika pautan terbuka dalam WhatsApp, tekan menu ⋮ dan pilih **Open in Chrome**.
+2. Pastikan status di penjuru atas kaunter menunjukkan **Disegerakkan**.
+3. Dalam Chrome, tekan menu ⋮ dan pilih **Add to Home screen**, kemudian **Install**.
+4. Ikon **Kaunter** akan muncul di skrin utama. Kaunter dibuka skrin penuh tanpa bar alamat.
+
+Untuk tablet di kaunter, panjangkan masa skrin padam: **Settings → Display → Screen timeout**.
+
+Di iPhone atau iPad, gunakan Safari: butang **Share → Add to Home Screen**.
 
 ## Mengemas kini skrip
 
@@ -84,6 +93,8 @@ URL kekal sama, jadi peranti tidak perlu disambung semula. Hanya jika PIN dituka
 
 Tekan **Cetak** pada resit. Pelayar akan membuka tetingkap cetak. Untuk printer thermal, pilih saiz kertas 58 mm atau 80 mm dalam tetingkap cetak, dan tetapkan lebar yang sama di **Tetapan → Resit**.
 
+Di Android, tetingkap cetak menggunakan khidmat cetak Android. Printer thermal Bluetooth biasanya perlukan aplikasi khidmat cetak daripada jenama printer itu, atau aplikasi khidmat cetak umum seperti RawBT dari Play Store. Selepas dipasang, printer itu akan muncul dalam senarai printer di tetingkap cetak.
+
 ## Had
 
 - Kaunter perlukan internet untuk menyimpan jualan. Jika internet terputus, jualan tidak dapat disimpan sehingga sambungan pulih.
@@ -93,4 +104,5 @@ Tekan **Cetak** pada resit. Pelayar akan membuka tetingkap cetak. Untuk printer 
 ## Fail dalam repo
 
 - `index.html`: aplikasi kaunter.
+- `manifest.webmanifest` dan ikon `*.png`: membolehkan kaunter dipasang sebagai aplikasi di telefon dan tablet.
 - `apps-script/Code.gs`: skrip untuk Google Sheet.

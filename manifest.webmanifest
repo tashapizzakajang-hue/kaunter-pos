@@ -1,0 +1,17 @@
+{
+  "name": "Kaunter POS",
+  "short_name": "Kaunter",
+  "description": "Kaunter jualan untuk kedai F&B, data disimpan dalam Google Sheet.",
+  "lang": "ms",
+  "start_url": "./#jualan",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14201A",
+  "theme_color": "#14201A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
