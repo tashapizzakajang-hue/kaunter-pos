@@ -87,7 +87,7 @@ Di iPhone atau iPad, gunakan Safari: butang **Share → Add to Home Screen**.
 1. Tambah nama staf di kaunter: **Tetapan → Staf → Tambah**.
 2. Sebelum bayar, pilih staf di troli. Butang Bayar terkunci sehingga staf dipilih. Pilihan diingat pada peranti itu untuk pesanan seterusnya, jadi tukar bila staf lain mengambil alih.
 3. Nama staf dicetak pada resit, dan disimpan dalam lajur **Staf** di tab Jualan dan Item.
-4. Untuk gaji, buka tab **Ikut staf** dalam Google Sheet. Tukar tarikh di **B1** (dari) dan **B2** (hingga). Jadual kiri menunjukkan jumlah item dan jualan setiap staf. Jadual kanan memecahkan jumlah item ikut kategori, contohnya Special Pizza, Classic dan Premium. Hanya pesanan yang dibayar dikira.
+4. Untuk gaji, buka tab **Ikut staf** dalam Google Sheet. Tukar tarikh di **B1** (dari) dan **B2** (hingga). Jadual kiri menunjukkan jumlah item, jualan dan **Jumlah pizza** setiap staf. Jumlah pizza mengira semua kategori yang namanya mengandungi "Pizza" (Classic, Premium dan Special). Jadual kanan memecahkan jumlah item ikut kategori, contohnya Special Pizza, Classic dan Premium. Hanya pesanan yang dibayar dikira.
 
 Dalam kaunter, tab **Laporan** juga menunjukkan kad **Ikut staf** untuk tempoh yang dipilih.
 
