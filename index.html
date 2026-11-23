@@ -740,7 +740,7 @@ async function apiCall(conn, action, body, timeoutMs) {
   try {
     // text/plain keeps this a "simple" request, which Apps Script accepts from another site without a preflight.
     res = await fetch(conn.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...(body || {}), pin: conn.pin, action }), redirect: 'follow', signal: ctl.signal });
-  } catch (e) { throw { code: 'network', message: String((e && e.message) || e) }; }
+  } catch (e) { throw { code: navigator.onLine === false ? 'network' : 'blocked', message: String((e && e.message) || e) }; }
   finally { clearTimeout(timer); }
   if (!res.ok) throw { code: 'http', message: 'HTTP ' + res.status };
   let j;
@@ -808,7 +808,7 @@ function sheetsAdapter(conn) {
       let j;
       // The script ignores a repeated order id, so one retry after a dropped connection cannot record the sale twice.
       try { j = await call('addOrder', { date, order: o }, 45000); }
-      catch (e) { if (e.code !== 'network') throw e; await new Promise(r => setTimeout(r, 1500)); j = await call('addOrder', { date, order: o }, 45000); }
+      catch (e) { if (e.code !== 'network' && e.code !== 'blocked') throw e; await new Promise(r => setTimeout(r, 1500)); j = await call('addOrder', { date, order: o }, 45000); }
       const saved = j.order || o;
       if (date === st.date) {
         st.today = { date, orders: { ...((st.today && st.today.orders) || {}), [saved.id]: saved } };
@@ -840,7 +840,8 @@ async function W(fn) {
 }
 function writeErrMsg(e) {
   const c = e && e.code;
-  if (c === 'network') return 'Tiada sambungan internet, atau Google tidak menjawab. Cuba lagi.';
+  if (c === 'network') return 'Tiada sambungan internet. Cuba lagi bila internet pulih.';
+  if (c === 'blocked') return 'Google tidak membenarkan kaunter menghubungi skrip. Semak tetapan Deploy skrip: Who has access mesti “Anyone”.';
   if (c === 'bad_pin') return 'PIN salah. Masukkan PIN yang sama seperti dalam skrip Google Sheets.';
   if (c === 'pin_not_set') return 'PIN belum ditukar dalam skrip Google Sheets. Tukar PIN, tekan Save, kemudian Deploy versi baharu.';
   if (c === 'no_sheet') return (e.message || 'Satu tab dalam Google Sheet hilang.') + ' Jangan tukar nama tab.';
@@ -973,7 +974,7 @@ function renderStatus() {
   let cls = 'wait', txt = 'Menyambung…';
   if (S.mode === 'nodb') { cls = 'bad'; txt = 'Belum disambung'; }
   else if (S.mode === 'db') {
-    if (S.connErr) { cls = 'bad'; txt = S.connErr === 'network' ? 'Luar talian' : S.connErr === 'bad_pin' ? 'PIN salah' : 'Ralat sambungan'; }
+    if (S.connErr) { cls = 'bad'; txt = S.connErr === 'network' ? 'Luar talian' : S.connErr === 'blocked' ? 'Google menolak' : S.connErr === 'bad_pin' ? 'PIN salah' : 'Ralat sambungan'; }
     else if (S.synced) { cls = 'ok'; txt = 'Disegerakkan ' + fmtTime(S.lastSync); }
     else if (S.slow) { cls = 'wait'; txt = 'Google lambat menjawab'; }
   }
@@ -1800,7 +1801,7 @@ function renderConn() {
   else if (S.synced) msg = 'Bersambung. Kali terakhir disegerakkan pukul ' + fmtTime(S.lastSync) + '.';
   else msg = 'Menyambung…';
   const st = $('#conn-status'); st.textContent = msg; st.className = 'small gs-status' + (bad ? ' bad' : '');
-  $('#conn-form').hidden = on && S.connErr !== 'bad_pin' && S.connErr !== 'http' && S.connErr !== 'bad_reply';
+  $('#conn-form').hidden = on && S.connErr !== 'bad_pin' && S.connErr !== 'http' && S.connErr !== 'bad_reply' && S.connErr !== 'blocked';
   $('#conn-actions').hidden = !on;
   if (on && document.activeElement !== $('#c-url') && !$('#c-url').value) $('#c-url').value = S.conn.url;
   const url = S.store && S.store.sheetUrl;
@@ -1817,7 +1818,18 @@ async function connectSheets() {
     saveConn({ url, pin });
     toast('Bersambung' + (j.name ? ': ' + j.name : ''));
     setTimeout(() => { location.hash = 'jualan'; location.reload(); }, 700);
-  } catch (e) { toast(writeErrMsg(e), true); b.disabled = false; b.textContent = 'Sambung'; }
+  } catch (e) {
+    b.disabled = false; b.textContent = 'Sambung';
+    const st = $('#conn-status'); st.className = 'small gs-status bad';
+    if (e.code === 'blocked' || e.code === 'http' || e.code === 'bad_reply') {
+      st.replaceChildren('Google menolak sambungan. Semak perkara ini dalam Apps Script, kemudian cuba lagi:',
+        h('br'), '1. Deploy → Manage deployments: “Who has access” mesti Anyone (bukan “Anyone with Google account”).',
+        h('br'), '2. Kod Code.gs sudah disimpan (Save) sebelum Deploy. Jika anda tampal kod selepas Deploy, buat Edit → Version: New version → Deploy.',
+        h('br'), '3. URL disalin dari “Web app”, dan berakhir dengan /exec.',
+        h('br'), 'Ujian pantas: buka URL itu dalam tetingkap Incognito. Ia patut memaparkan “Kaunter POS: skrip berjalan”.');
+    } else st.textContent = writeErrMsg(e);
+    toast(writeErrMsg(e), true);
+  }
 }
 function setupLink() {
   const data = btoa(unescape(encodeURIComponent(JSON.stringify({ u: S.conn.url, p: S.conn.pin }))));
