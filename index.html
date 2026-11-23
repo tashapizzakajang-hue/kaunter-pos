@@ -1360,8 +1360,10 @@ function wrapText(s, w) {
   return out.length ? out : [''];
 }
 const LOGO_SRC = 'logo.png';
-const logoState = { ok: false };
-(() => { const im = new Image(); im.onload = () => { logoState.ok = true; }; im.src = LOGO_SRC; })();
+const APP_VERSION = '2026-11-23c';
+// Remembers a logo that failed to load, so later receipts fall back to the shop name at once.
+const logoState = { failed: false };
+(() => { const im = new Image(); im.onerror = () => { logoState.failed = true; }; im.src = LOGO_SRC; })();
 function receiptText(o, date, opts) {
   const cfg = S.cfg, W_ = cfg.paper === '80' ? 42 : 32, L = [];
   const center = s => { s = s.slice(0, W_); return ' '.repeat(Math.max(0, Math.floor((W_ - s.length) / 2))) + s; };
@@ -1406,13 +1408,15 @@ function receiptText(o, date, opts) {
 function showReceipt(o, date, fresh) {
   modal((box, close) => {
     box.style.width = 'min(460px, 100%)';
-    const text = receiptText(o, date), withLogo = logoState.ok;
-    const shown = withLogo ? receiptText(o, date, { logo: true }) : text;
-    const pre = h('pre', { class: 'receipt', text: shown });
+    const text = receiptText(o, date), withName = text, withoutName = receiptText(o, date, { logo: true });
+    let useLogo = !logoState.failed;
+    const pre = h('pre', { class: 'receipt', text: useLogo ? withoutName : withName });
+    const logo = useLogo ? h('img', { class: 'rc-logo', src: LOGO_SRC, alt: S.cfg.name || 'Logo kedai' }) : null;
+    if (logo) logo.addEventListener('error', () => { logoState.failed = true; useLogo = false; logo.remove(); pre.textContent = withName; });
     const acts = h('div', { class: 'modal-actions' });
     acts.append(h('button', { class: 'btn', type: 'button', onclick: () => copyText(text, pre) }, 'Salin teks'));
     if (canDownload()) acts.append(h('button', { class: 'btn', type: 'button', onclick: () => saveFile(`resit-${date}-${noStr(o.no).slice(1)}.txt`, text) }, 'Simpan .txt'));
-    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => printReceipt(shown, withLogo) }, 'Cetak'));
+    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => printReceipt(useLogo ? withoutName : withName, useLogo, withName) }, 'Cetak'));
     if (o.status !== 'void' && S.canWrite && S.mode !== 'nodb') {
       acts.append(h('button', { class: 'btn danger', type: 'button', onclick: e => armConfirm(e.currentTarget, 'Ketik lagi untuk batal', async () => {
         try {
@@ -1425,18 +1429,18 @@ function showReceipt(o, date, fresh) {
     box.append(
       mhead(fresh ? `Pesanan ${noStr(o.no)} selesai` : `Pesanan ${noStr(o.no)}`, `${fmtDate(date)} ${fmtTime(o.t)} · ${PAY[o.pay] || o.pay}${o.status === 'void' ? ' · DIBATALKAN' : ''}`),
       fresh && o.pay === 'cash' && toSen(o.chg) > 0 ? h('div', { class: 'change-callout' }, h('span', { text: 'Beri baki' }), h('strong', { text: RM(toSen(o.chg)) })) : null,
-      h('div', { class: 'paper' }, withLogo ? h('img', { class: 'rc-logo', src: LOGO_SRC, alt: S.cfg.name || 'Logo kedai' }) : null, pre),
+      h('div', { class: 'paper' }, logo, pre),
       acts);
   });
 }
-async function printReceipt(text, withLogo) {
+async function printReceipt(text, withLogo, fallbackText) {
   // Thermal paper prints about 48 mm (58 mm roll) or 72 mm (80 mm roll); size the text so a full line fits.
   const wide = S.cfg.paper === '80', area = $('#print-area');
   const pre = h('pre', { text }); pre.style.fontSize = wide ? '8.1pt' : '7.1pt';
   const img = withLogo ? h('img', { src: LOGO_SRC, alt: '' }) : null;
   area.style.width = wide ? '72mm' : '48mm';
   area.replaceChildren(...(img ? [img] : []), pre);
-  if (img) { try { await img.decode(); } catch (e) {} }
+  if (img) { try { await img.decode(); } catch (e) { img.remove(); if (fallbackText) pre.textContent = fallbackText; } }
   try { window.print(); } catch (e) {}
 }
 
@@ -1833,7 +1837,8 @@ function renderSettings() {
   const p = t => h('p', { text: t });
   about.replaceChildren(h('h2', { text: 'Di mana data disimpan' }),
     p('Menu, tetapan, pesanan tertangguh dan jualan disimpan dalam Google Sheet anda. Setiap peranti menyemak perubahan setiap 30 saat, dan serta-merta selepas setiap simpanan.'),
-    p('Jangan tukar nama tab atau susunan lajur dalam tab Jualan, Item, Menu, Tetapan dan Tertangguh. Anda boleh ubah harga, nama item dan stok terus dalam tab Menu.'));
+    p('Jangan tukar nama tab atau susunan lajur dalam tab Jualan, Item, Menu, Tetapan dan Tertangguh. Anda boleh ubah harga, nama item dan stok terus dalam tab Menu.'),
+    h('p', { class: 'hint', text: 'Versi kaunter: ' + APP_VERSION }));
 }
 async function saveSettings(e) {
   e.preventDefault();
