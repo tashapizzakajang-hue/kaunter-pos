@@ -23,6 +23,7 @@ Semua data ada dalam Google Sheet **Jualan Kaunter POS**:
 | Item | Satu baris setiap item yang dijual | Jangan |
 | Ringkasan harian | Jumlah setiap hari (formula) | Jangan |
 | Item terlaris | Kedudukan item (formula) | Jangan |
+| Ikut staf | Jumlah item setiap staf ikut kategori, untuk kiraan gaji (formula) | Ya, tarikh di **B1** dan **B2** sahaja |
 | Menu | Senarai menu | Ya: nama, harga, kategori, pilihan, stok |
 | Tetapan | Nama kedai, alamat, SST dan lain-lain | Ya, lajur **Nilai** sahaja |
 | Tertangguh | Pesanan yang belum dibayar | Jangan |
@@ -78,6 +79,15 @@ Pautan ini mengandungi URL skrip dan PIN, jadi hantar hanya kepada pekerja kedai
 Untuk tablet di kaunter, panjangkan masa skrin padam: **Settings → Display → Screen timeout**.
 
 Di iPhone atau iPad, gunakan Safari: butang **Share → Add to Home Screen**.
+
+## Staf dan kiraan gaji
+
+1. Tambah nama staf di kaunter: **Tetapan → Staf → Tambah**.
+2. Sebelum bayar, pilih staf di troli. Butang Bayar terkunci sehingga staf dipilih. Pilihan diingat pada peranti itu untuk pesanan seterusnya, jadi tukar bila staf lain mengambil alih.
+3. Nama staf dicetak pada resit, dan disimpan dalam lajur **Staf** di tab Jualan dan Item.
+4. Untuk gaji, buka tab **Ikut staf** dalam Google Sheet. Tukar tarikh di **B1** (dari) dan **B2** (hingga). Jadual kiri menunjukkan jumlah item dan jualan setiap staf. Jadual kanan memecahkan jumlah item ikut kategori, contohnya Special Pizza, Classic dan Premium. Hanya pesanan yang dibayar dikira.
+
+Dalam kaunter, tab **Laporan** juga menunjukkan kad **Ikut staf** untuk tempoh yang dipilih.
 
 ## Mengemas kini skrip
 

@@ -343,6 +343,13 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
 .gsbar > span{flex:1;min-width:200px}
 .gs-card{margin-top:20px;display:flex;flex-direction:column;gap:10px}
 .look-card{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.staff-pick{flex-basis:100%}
+.staff-pick select{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-weight:600}
+.staff-pick.need select{border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger)}
+.staff-list{display:flex;flex-wrap:wrap;gap:8px}
+.staff-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font-weight:600}
+.staff-chip .btn{padding:3px 9px;font-size:12.5px;border-radius:999px}
+.staff-cats{display:block;font-size:12px;color:var(--ink-3);font-weight:400}
 .look-card h2{margin:0}
 .look-card p{margin:0}
 .look-card .seg{align-self:flex-start}
@@ -439,6 +446,7 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
             <button type="button" id="type-pickup" aria-pressed="false">Pickup</button>
             <button type="button" id="type-app" aria-pressed="false">Apps</button>
           </div>
+          <label class="ref staff-pick" id="staff-row" hidden><span>Staf</span><select id="t-staff" aria-label="Staf yang merekod pesanan ini"></select></label>
           <label class="ref"><span id="ref-label">Nama</span><input id="t-ref" autocomplete="off" maxlength="40" placeholder="pilihan"></label>
           <div class="apps" id="app-row" role="group" aria-label="Platform" hidden>
             <span class="lbl">Platform</span>
@@ -522,6 +530,12 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
     <section class="view scroll" id="view-tetapan" aria-label="Tetapan" hidden>
       <div class="wrap narrow gut">
         <div class="view-head"><h1>Tetapan</h1></div>
+        <section class="card look-card" id="staff-card" aria-labelledby="staff-h" style="margin:0 0 16px">
+          <h2 id="staff-h">Staf</h2>
+          <p class="hint">Staf yang boleh dipilih semasa merekod jualan. Nama staf disimpan pada setiap pesanan dan dalam Google Sheet (tab Jualan, Item dan Ikut staf).</p>
+          <div class="staff-list" id="staff-list"></div>
+          <div class="gs-link"><input id="staff-new" maxlength="30" autocomplete="off" placeholder="Nama staf baharu" aria-label="Nama staf baharu"><button class="btn sm primary" id="staff-add" type="button">Tambah</button></div>
+        </section>
         <section class="card gs-card" id="conn-card" aria-labelledby="conn-h">
           <h2 id="conn-h">Sambungan Google Sheets</h2>
           <p class="small gs-status" id="conn-status"></p>
@@ -712,11 +726,13 @@ async function chooseTheme(k) {
   try { await W(() => S.store.patchConfig({ theme: k })); toast('Tema ditukar: ' + THEMES[k].name); }
   catch (e) { S.cfg = { ...S.cfg, theme: prev }; applyTheme(); renderLook(); toast(writeErrMsg(e), true); }
 }
-const DEF = { name: 'Kedai Anda', address: '', phone: '', sstNo: '', sst: 0, svc: 0, round5: true, paper: '58', footer: 'Terima kasih. Sila datang lagi!', cats: [] };
+const DEF = { name: 'Kedai Anda', address: '', phone: '', sstNo: '', sst: 0, svc: 0, round5: true, paper: '58', footer: 'Terima kasih. Sila datang lagi!', cats: [], staff: [] };
 const VIEWS = ['jualan', 'pesanan', 'laporan', 'menu', 'tetapan'];
 const RANGES = [['today', 'Hari ini'], ['yest', 'Semalam'], ['7d', '7 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lepas']];
 
-const newCart = () => ({ type: 'shop', app: '', ref: '', lines: [], disc: { type: 'pct', v: '' }, discOpen: false, del: '', delOpen: false, openId: null, t0: null });
+const STAFF_KEY = 'kaunter-staf';
+const stickyStaff = () => { try { return localStorage.getItem(STAFF_KEY) || ''; } catch (e) { return ''; } };
+const newCart = () => ({ type: 'shop', app: '', staff: stickyStaff(), ref: '', lines: [], disc: { type: 'pct', v: '' }, discOpen: false, del: '', delOpen: false, openId: null, t0: null });
 
 const S = {
   mode: 'loading', canWrite: false, canAdmin: false, store: null, downloads: null,
@@ -1061,7 +1077,7 @@ function addLine(item, mods, note, q, pulse) {
   const key = item.id + '|' + mods.map(m => m.n).sort().join(',') + '|' + (note || '');
   const ex = S.cart.lines.find(l => l.key === key);
   if (ex) ex.q += q;
-  else S.cart.lines.push({ key, id: item.id, n: item.name, ps: toSen(item.price), mods: mods.map(m => ({ n: m.n, ps: toSen(m.p) })), note: note || '', q });
+  else S.cart.lines.push({ key, id: item.id, n: item.name, c: catOf(item), ps: toSen(item.price), mods: mods.map(m => ({ n: m.n, ps: toSen(m.p) })), note: note || '', q });
   cartChanged(pulse ? item.id : null);
 }
 function removeLine(l, silent) {
@@ -1084,6 +1100,16 @@ function renderTicket() {
   $('#tk-title').textContent = C.openId ? ticketLabel(C) : noStr(nextNo());
   const hc = $('#held-count'); hc.textContent = S.open.length; hc.className = 'count' + (S.open.length ? '' : ' zero');
   ORDER_TYPES.forEach(k => $('#type-' + k).setAttribute('aria-pressed', C.type === k ? 'true' : 'false'));
+  const staffList = Array.isArray(S.cfg.staff) ? S.cfg.staff : [];
+  const sel = $('#t-staff'), sig = staffList.join('|');
+  if (sel.dataset.sig !== sig) {
+    sel.replaceChildren(h('option', { value: '' }, 'Pilih staf…'), ...staffList.map(n => h('option', { value: n }, n)));
+    sel.dataset.sig = sig;
+  }
+  const staffOk = staffList.includes(C.staff);
+  if (document.activeElement !== sel) sel.value = staffOk ? C.staff : '';
+  $('#staff-row').hidden = !staffList.length;
+  $('#staff-row').classList.toggle('need', !!staffList.length && !staffOk && C.lines.length > 0);
   $('#app-row').hidden = C.type !== 'app';
   document.querySelectorAll('#app-row [data-app]').forEach(b => b.setAttribute('aria-pressed', C.app === b.dataset.app ? 'true' : 'false'));
   $('#ref-label').textContent = C.type === 'app' ? 'No. order' : 'Nama';
@@ -1133,8 +1159,9 @@ function renderTicket() {
 
   const blocked = S.mode === 'loading' || S.mode === 'nodb' || !S.canWrite;
   const needApp = C.type === 'app' && !C.app;
-  $('#btn-pay').disabled = !c.count || blocked || needApp;
-  $('#pay-lbl').textContent = needApp && c.count ? 'Pilih platform dulu' : 'Bayar';
+  const needStaff = staffList.length > 0 && !staffOk;
+  $('#btn-pay').disabled = !c.count || blocked || needApp || needStaff;
+  $('#pay-lbl').textContent = !c.count ? 'Bayar' : needStaff ? 'Pilih staf dulu' : needApp ? 'Pilih platform dulu' : 'Bayar';
   $('#pay-amt').textContent = RM(c.gross);
   $('#btn-hold').disabled = !c.count || blocked;
   $('#btn-hold').textContent = C.openId ? 'Kemas kini' : 'Simpan dulu';
@@ -1195,7 +1222,7 @@ async function holdTicket() {
   const C = S.cart;
   if (!C.lines.length || !guardWrite()) return;
   const btn = $('#btn-hold'); btn.disabled = true;
-  const t = { id: C.openId || uid(), type: C.type, app: C.type === 'app' ? C.app || '' : '', ref: C.ref.trim().slice(0, 40), lines: clone(C.lines), disc: clone(C.disc), del: C.del || '', t: C.t0 || Date.now(), upd: Date.now() };
+  const t = { id: C.openId || uid(), type: C.type, staff: C.staff || '', app: C.type === 'app' ? C.app || '' : '', ref: C.ref.trim().slice(0, 40), lines: clone(C.lines), disc: clone(C.disc), del: C.del || '', t: C.t0 || Date.now(), upd: Date.now() };
   try {
     await W(() => S.store.saveOpen(t));
     toast('Disimpan: ' + ticketLabel(t));
@@ -1203,7 +1230,7 @@ async function holdTicket() {
   } catch (e) { toast(writeErrMsg(e), true); renderTicket(); }
 }
 function resumeTicket(t) {
-  S.cart = { ...newCart(), type: ORDER_TYPES.includes(t.type) ? t.type : 'shop', app: t.app || '', ref: t.ref || '', lines: clone(t.lines || []), disc: clone(t.disc || { type: 'pct', v: '' }), del: t.del || '', openId: t.id, t0: t.t || Date.now() };
+  S.cart = { ...newCart(), type: ORDER_TYPES.includes(t.type) ? t.type : 'shop', app: t.app || '', staff: t.staff || stickyStaff(), ref: t.ref || '', lines: clone(t.lines || []), disc: clone(t.disc || { type: 'pct', v: '' }), del: t.del || '', openId: t.id, t0: t.t || Date.now() };
   cartChanged(); openTicketPhone();
 }
 function openHeld() {
@@ -1247,6 +1274,7 @@ function quickAmounts(total) {
 function openPay() {
   if (!S.cart.lines.length || !guardWrite()) return;
   if (S.cart.type === 'app' && !S.cart.app) { toast('Pilih platform: Grab, Shopee atau Foodpanda.', true); return; }
+  if ((S.cfg.staff || []).length && !(S.cfg.staff || []).includes(S.cart.staff)) { toast('Pilih staf dulu.', true); return; }
   const keys = S.cart.type === 'app' ? ['app', 'cash', 'card', 'qr', 'ewallet'] : ['cash', 'card', 'qr', 'ewallet'];
   let method = keys[0], busy = false;
   modal((box, close) => {
@@ -1301,8 +1329,10 @@ async function completePayment(method, tendSen) {
   const tend = method === 'cash' && tendSen > 0 ? tendSen : c.total;
   const o = {
     id: uid(), no: nextNo(), t: Date.now(), type: C.type, ...(C.type === 'app' ? { app: C.app } : {}), ref: C.ref.trim().slice(0, 40),
+    staff: (S.cfg.staff || []).includes(C.staff) ? C.staff : '',
     items: C.lines.map(l => {
-      const it = { n: l.n, q: l.q, p: r2(l.ps), m: l.mods.map(m => m.n), mp: r2(modsSen(l)) };
+      const mi = S.menu.find(i => i.id === l.id);
+      const it = { n: l.n, c: l.c || (mi ? catOf(mi) : ''), q: l.q, p: r2(l.ps), m: l.mods.map(m => m.n), mp: r2(modsSen(l)) };
       if (l.note) it.note = l.note;
       return it;
     }),
@@ -1339,6 +1369,7 @@ function receiptText(o, date) {
   L.push(rule);
   L.push(lr('No. ' + noStr(o.no), fmtDate(date) + ' ' + fmtTime(o.t)));
   L.push(typeName(o) + (o.ref ? (o.type === 'app' ? ', order ' : ', ') + o.ref : ''));
+  if (o.staff) L.push('Staf: ' + o.staff);
   if (o.status === 'void') L.push(center('*** DIBATALKAN ***'));
   L.push(rule);
   for (const it of o.items || []) {
@@ -1436,13 +1467,14 @@ function renderOrders() {
       h('td', {}, h('button', { class: 'no-btn', type: 'button', 'aria-label': `Lihat resit ${noStr(o.no)}`, onclick: e => { e.stopPropagation(); open(); } }, noStr(o.no))),
       h('td', { text: fmtTime(o.t) }),
       h('td', { text: ticketLabel(o) }),
+      h('td', { text: o.staff || '–' }),
       h('td', { class: 'items', text: itemsSummary(o) }),
       h('td', { text: PAY[o.pay] || o.pay }),
       h('td', { class: 'num', text: fmt(toSen(o.total)) }),
       h('td', {}, h('span', { class: 'pill ' + (o.status === 'void' ? 'void' : 'paid'), text: o.status === 'void' ? 'Dibatalkan' : 'Dibayar' })));
   }));
   body.replaceChildren(h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' },
-    h('thead', {}, h('tr', {}, ['No', 'Masa', 'Jenis', 'Item', 'Bayaran'].map(t => h('th', { text: t })), h('th', { class: 'num', text: 'Jumlah (RM)' }), h('th', { text: 'Status' }))),
+    h('thead', {}, h('tr', {}, ['No', 'Masa', 'Jenis', 'Staf', 'Item', 'Bayaran'].map(t => h('th', { text: t })), h('th', { class: 'num', text: 'Jumlah (RM)' }), h('th', { text: 'Status' }))),
     tbody)));
 }
 
@@ -1469,7 +1501,7 @@ async function loadReport() {
   S.rep.loading = false; renderReport();
 }
 function aggregate(days) {
-  const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
+  const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, staff: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
   for (const [date, doc] of Object.entries(days || {})) {
     for (const o of doc && doc.orders ? Object.values(doc.orders) : []) {
       const tot = toSen(o.total);
@@ -1477,6 +1509,9 @@ function aggregate(days) {
       R.orders++; R.sub += toSen(o.sub); R.disc += toSen(o.disc); R.svc += toSen(o.svc); R.sst += toSen(o.sst); R.del += toSen(o.del); R.rnd += toSen(o.rnd); R.total += tot;
       const p = R.pay[o.pay] = R.pay[o.pay] || { n: 0, v: 0 }; p.n++; p.v += tot;
       const ch = R.ch[typeName(o)] = R.ch[typeName(o)] || { n: 0, v: 0 }; ch.n++; ch.v += tot;
+      const sk = o.staff || 'Tiada nama';
+      const sf = R.staff[sk] = R.staff[sk] || { n: 0, q: 0, v: 0, cats: {} }; sf.n++; sf.v += tot;
+      for (const it of o.items || []) { sf.q += it.q; const ck = it.c || 'Lain-lain'; sf.cats[ck] = (sf.cats[ck] || 0) + it.q; }
       const hr = R.byHour[new Date(o.t).getHours()]; hr.v += tot; hr.n++;
       const bd = R.byDay[date] = R.byDay[date] || { v: 0, n: 0 }; bd.v += tot; bd.n++;
       for (const it of o.items || []) {
@@ -1595,6 +1630,17 @@ function renderReport() {
         h('td', {}, h('div', { class: 'meter', role: 'img', 'aria-label': pct + '%' }, h('span', { style: `width:${pct}%` }))),
         h('td', { class: 'num', text: fmt(x.v) }));
     }))));
+  const staffKeys = Object.keys(R.staff).sort((a, b) => (a === 'Tiada nama') - (b === 'Tiada nama') || R.staff[b].q - R.staff[a].q);
+  const showStaff = staffKeys.length > 1 || (staffKeys.length === 1 && staffKeys[0] !== 'Tiada nama');
+  const staffCard = showStaff ? h('section', { class: 'card' },
+    h('h2', { text: 'Ikut staf' }), h('p', { class: 'cap', text: 'Pesanan dibayar sahaja. Bawah nama: bilangan item ikut kategori.' }),
+    h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, h('th', { text: 'Staf' }), h('th', { class: 'num', text: 'Pesanan' }), h('th', { class: 'num', text: 'Item' }), h('th', { class: 'num', text: 'RM' }))),
+      h('tbody', {}, staffKeys.map(k => {
+        const x = R.staff[k];
+        const cats = Object.entries(x.cats).sort((a, b) => b[1] - a[1]).map(([c, q]) => `${c} ${q}`).join(' · ');
+        return h('tr', {}, h('td', {}, k, h('span', { class: 'staff-cats', text: cats })), h('td', { class: 'num', text: x.n }), h('td', { class: 'num', text: x.q }), h('td', { class: 'num', text: fmt(x.v) }));
+      })))) : null;
   const payCard = h('section', { class: 'card' },
     h('h2', { text: 'Kaedah bayaran' }), h('p', { class: 'cap', text: 'Bilangan pesanan dan jumlah (RM)' }),
     h('table', { class: 'tbl' }, h('tbody', {}, payRows)),
@@ -1623,7 +1669,7 @@ function renderReport() {
 
   body.replaceChildren(kpis, h('div', { class: 'rep-grid' },
     h('div', { class: 'stack' }, chartCard, itemsCard),
-    h('div', { class: 'stack' }, chCard, payCard, zCard)));
+    h('div', { class: 'stack' }, staffCard, chCard, payCard, zCard)));
   barChart(chartHost, bars, `${single ? 'Kutipan ikut jam' : 'Kutipan ikut hari'}, ${period}`);
   S.rep.lastBars = { host: chartHost, bars, label: single ? 'Kutipan ikut jam' : 'Kutipan ikut hari' };
 }
@@ -1634,11 +1680,11 @@ function exportCSV() {
     if (/^[=+@\t]/.test(s)) s = "'" + s;
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const rows = [['Tarikh', 'Masa', 'No', 'Jenis', 'Nama', 'Item', 'Jumlah kecil', 'Diskaun', 'Caj perkhidmatan', 'SST', 'Caj delivery', 'Pembundaran', 'Jumlah', 'Bayaran', 'Status']];
+  const rows = [['Tarikh', 'Masa', 'No', 'Jenis', 'Nama', 'Staf', 'Item', 'Jumlah kecil', 'Diskaun', 'Caj perkhidmatan', 'SST', 'Caj delivery', 'Pembundaran', 'Jumlah', 'Bayaran', 'Status']];
   Object.keys(S.rep.days || {}).sort().forEach(date => {
     const doc = S.rep.days[date];
     Object.values(doc && doc.orders || {}).sort((a, b) => a.t - b.t).forEach(o => rows.push([
-      date, fmtTime(o.t), o.no, typeName(o), o.ref || '',
+      date, fmtTime(o.t), o.no, typeName(o), o.ref || '', o.staff || '',
       (o.items || []).map(it => `${it.q}x ${it.n}${it.m && it.m.length ? ' (' + it.m.join(', ') + ')' : ''}`).join('; '),
       o.sub, o.disc, o.svc, o.sst, o.del || 0, o.rnd, o.total, PAY[o.pay] || o.pay, o.status === 'void' ? 'Dibatalkan' : 'Dibayar']));
   });
@@ -1760,6 +1806,7 @@ function openItemForm(item) {
 /* Settings */
 function renderSettings() {
   renderLook();
+  renderStaff();
   const ro = S.mode === 'nodb' || S.mode === 'loading' || !S.canAdmin;
   ['#set-fs', '#set-fs2', '#set-fs3'].forEach(s => { $(s).disabled = ro; });
   $('#s-save').hidden = ro;
@@ -1793,6 +1840,32 @@ async function saveSettings(e) {
   try { await W(() => S.store.saveConfig(cfg)); S.setDirty = false; toast('Tetapan disimpan'); }
   catch (ex) { err.textContent = writeErrMsg(ex); }
   btn.disabled = false;
+}
+
+/* ---------- staff ---------- */
+function renderStaff() {
+  const list = Array.isArray(S.cfg.staff) ? S.cfg.staff : [], can = S.canAdmin && !!S.store;
+  $('#staff-list').replaceChildren(...(list.length ? list.map(n => h('span', { class: 'staff-chip' }, n,
+    can ? h('button', { class: 'btn ghost', type: 'button', 'aria-label': 'Buang ' + n, onclick: e => armConfirm(e.currentTarget, 'Buang?', () => saveStaff(list.filter(x => x !== n), null)) }, '×') : null))
+    : [h('span', { class: 'hint', text: 'Belum ada staf. Jika senarai kosong, jualan direkod tanpa nama staf.' })]));
+  $('#staff-new').disabled = !can; $('#staff-add').disabled = !can;
+}
+async function saveStaff(list, added) {
+  try {
+    await W(() => S.store.patchConfig({ staff: list }));
+    const got = Array.isArray(S.cfg.staff) ? S.cfg.staff : [];
+    if (added && !got.includes(added)) { toast('Skrip Google Sheets perlu dikemas kini dahulu untuk menyimpan senarai staf. Lihat README, bahagian “Mengemas kini skrip”.', true); return; }
+    toast(added ? added + ' ditambah' : 'Senarai staf dikemas kini');
+  } catch (e) { toast(writeErrMsg(e), true); }
+  renderStaff(); renderTicket();
+}
+function addStaff() {
+  const name = $('#staff-new').value.replace(/[,;]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
+  if (!name) { $('#staff-new').focus(); return; }
+  const list = Array.isArray(S.cfg.staff) ? S.cfg.staff : [];
+  if (list.some(x => x.toLowerCase() === name.toLowerCase())) { toast(name + ' sudah ada dalam senarai.', true); return; }
+  $('#staff-new').value = '';
+  saveStaff([...list, name], name);
 }
 
 /* ---------- connection screen ---------- */
@@ -1908,6 +1981,13 @@ function tick() {
 function wire() {
   window.addEventListener('hashchange', route);
   $('#q').addEventListener('input', e => { S.q = e.target.value; renderPOS(); });
+  $('#t-staff').addEventListener('change', e => {
+    S.cart.staff = e.target.value;
+    try { if (e.target.value) localStorage.setItem(STAFF_KEY, e.target.value); } catch (x) {}
+    cartChanged();
+  });
+  $('#staff-add').addEventListener('click', addStaff);
+  $('#staff-new').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addStaff(); } });
   ORDER_TYPES.forEach(k => $('#type-' + k).addEventListener('click', () => { S.cart.type = k; if (k !== 'app') S.cart.app = ''; cartChanged(); }));
   document.querySelectorAll('#app-row [data-app]').forEach(b => b.addEventListener('click', () => { S.cart.app = b.dataset.app; cartChanged(); }));
   $('#t-ref').addEventListener('input', e => { S.cart.ref = e.target.value; saveDraft(); if (S.cart.openId) $('#tk-title').textContent = ticketLabel(S.cart); });

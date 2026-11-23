@@ -19,10 +19,10 @@ const PIN = 'TUKAR-PIN-INI';
 
 const SH = { sales: 'Jualan', items: 'Item', menu: 'Menu', config: 'Tetapan', open: 'Tertangguh' };
 // Jualan: A Tarikh, B Masa, C No, D Jenis, E Nama, F Item, G Jumlah kecil, H Diskaun, I Caj perkhidmatan,
-// J SST, K Caj delivery, L Pembundaran, M Jumlah, N Bayaran, O Status, P ID, Q Data (JSON)
-const SALES_COLS = 17, C_DATE = 1, C_TIME = 2, C_NO = 3, C_STATUS = 15, C_ID = 16, C_DATA = 17;
-// Item: A Tarikh, B Masa, C No, D Item, E Pilihan, F Kuantiti, G Harga seunit, H Jumlah, I Status, J ID pesanan
-const ITEM_COLS = 10, I_STATUS = 9, I_ID = 10;
+// J SST, K Caj delivery, L Pembundaran, M Jumlah, N Bayaran, O Status, P ID, Q Data (JSON), R Staf
+const SALES_COLS = 18, C_DATE = 1, C_TIME = 2, C_NO = 3, C_STATUS = 15, C_ID = 16, C_DATA = 17, C_STAFF = 18;
+// Item: A Tarikh, B Masa, C No, D Item, E Pilihan, F Kuantiti, G Harga seunit, H Jumlah, I Status, J ID pesanan, K Staf, L Kategori
+const ITEM_COLS = 12, I_STATUS = 9, I_ID = 10;
 const PAY = { cash: 'Tunai', card: 'Kad', qr: 'DuitNow QR', ewallet: 'e-Wallet', app: 'Apps' };
 const TYPES = { shop: 'Kedai', pickup: 'Pickup', app: 'Apps', dine: 'Makan sini', take: 'Bungkus' };
 const APPS = ['Grab', 'Shopee', 'Foodpanda'];
@@ -31,6 +31,7 @@ const CFG = [
   ['name', 'Nama kedai'], ['address', 'Alamat'], ['phone', 'Telefon'], ['sstNo', 'No. pendaftaran SST'],
   ['sst', 'SST (%)'], ['svc', 'Caj perkhidmatan (%)'], ['round5', 'Bundar tunai ke 5 sen'],
   ['paper', 'Lebar kertas resit (mm)'], ['footer', 'Nota kaki resit'], ['cats', 'Susunan kategori'], ['theme', 'Tema warna'],
+  ['staff', 'Senarai staf'],
 ];
 
 function doGet() {
@@ -159,7 +160,7 @@ function readConfig_() {
     const v = byLabel[label];
     if (k === 'sst' || k === 'svc') cfg[k] = Number(v) || 0;
     else if (k === 'round5') cfg[k] = !(v === false || String(v).toUpperCase() === 'FALSE');
-    else if (k === 'cats') cfg[k] = String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+    else if (k === 'cats' || k === 'staff') cfg[k] = String(v || '').split(',').map(s => s.trim()).filter(Boolean);
     else cfg[k] = String(v === null || v === undefined ? '' : v);
   });
   return cfg;
@@ -171,7 +172,7 @@ function writeConfig_(patch) {
   CFG.forEach(([k, label]) => {
     if (!(k in patch)) return;
     let v = patch[k];
-    if (k === 'cats') v = (v || []).join(', ');
+    if (k === 'cats' || k === 'staff') v = (v || []).map(x => String(x).replace(/,/g, ' ').trim()).filter(Boolean).join(', ');
     else if (k === 'round5') v = !!v;
     else if (k === 'sst' || k === 'svc') v = num_(v);
     else v = txt_(v === null || v === undefined ? '' : v);
@@ -218,17 +219,17 @@ function addOrder_(date, o) {
   const st = o.status === 'void' ? 'Dibatalkan' : 'Dibayar';
   const r = Math.max(sh.getLastRow(), 1) + 1;
   sh.getRange(r, 1, 1, SALES_COLS).setNumberFormats([['dd/mm/yyyy', 'hh:mm', '0', '@', '@', '@',
-    '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '@', '@', '@', '@']]);
+    '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '#,##0.00', '@', '@', '@', '@', '@']]);
   sh.getRange(r, 1, 1, SALES_COLS).setValues([[date, timeOf_(o.t), o.no, typeName_(o), String(o.ref || ''), itemsLine_(o),
     num_(o.sub), num_(o.disc), num_(o.svc), num_(o.sst), num_(o.del), num_(o.rnd), num_(o.total), PAY[o.pay] || String(o.pay || ''),
-    st, String(o.id), JSON.stringify(o)]]);
+    st, String(o.id), JSON.stringify(o), String(o.staff || '')]]);
   const items = (o.items || []).map(it => {
     const unit = (sen_(it.p) + sen_(it.mp)) / 100;
-    return [date, timeOf_(o.t), o.no, String(it.n), (it.m || []).join(', '), num_(it.q), unit, Math.round(unit * num_(it.q) * 100) / 100, st, String(o.id)];
+    return [date, timeOf_(o.t), o.no, String(it.n), (it.m || []).join(', '), num_(it.q), unit, Math.round(unit * num_(it.q) * 100) / 100, st, String(o.id), String(o.staff || ''), String(it.c || '')];
   });
   if (items.length) {
     const ish = sheet_(SH.items), ir = Math.max(ish.getLastRow(), 1) + 1;
-    const fmt = ['dd/mm/yyyy', 'hh:mm', '0', '@', '@', '0', '#,##0.00', '#,##0.00', '@', '@'];
+    const fmt = ['dd/mm/yyyy', 'hh:mm', '0', '@', '@', '0', '#,##0.00', '#,##0.00', '@', '@', '@', '@'];
     ish.getRange(ir, 1, items.length, ITEM_COLS).setNumberFormats(items.map(() => fmt));
     ish.getRange(ir, 1, items.length, ITEM_COLS).setValues(items);
   }
@@ -272,6 +273,7 @@ function orderFromRow_(r) {
     if (APPS.indexOf(typeLabel) >= 0) o.app = typeLabel;
   }
   o.id = String(r[C_ID - 1] || o.id);
+  if (!o.staff && r[C_STAFF - 1]) o.staff = String(r[C_STAFF - 1]);
   o.status = String(r[C_STATUS - 1]) === 'Dibatalkan' ? 'void' : 'paid';
   return o;
 }
