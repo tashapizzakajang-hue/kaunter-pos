@@ -1371,7 +1371,7 @@ function wrapText(s, w) {
   return out.length ? out : [''];
 }
 const LOGO_SRC = 'logo.png';
-const APP_VERSION = '2026-11-23e';
+const APP_VERSION = '2026-11-23f';
 // Remembers a logo that failed to load, so later receipts fall back to the shop name at once.
 const logoState = { failed: false };
 (() => { const im = new Image(); im.onerror = () => { logoState.failed = true; }; im.src = LOGO_SRC; })();
@@ -1529,10 +1529,11 @@ async function loadReport() {
   S.rep.loading = false; renderReport();
 }
 const isPizzaCat = c => /pizza/i.test(c || '');
+// The category in today's menu wins, so renaming a category also regroups earlier sales. A saved category
+// is used only for items no longer on the menu.
 function itemCat(it) {
-  if (it.c) return it.c;
   const m = S.menu.find(x => x.name === it.n);
-  return m ? catOf(m) : 'Lain-lain';
+  return m ? catOf(m) : (it.c || 'Lain-lain');
 }
 function aggregate(days) {
   const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, staff: {}, cats: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
