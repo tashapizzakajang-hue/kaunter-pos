@@ -351,6 +351,14 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
 .staff-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font-weight:600}
 .staff-chip .btn{padding:3px 9px;font-size:12.5px;border-radius:999px}
 .staff-cats{display:block;font-size:12px;color:var(--ink-3);font-weight:400}
+.type-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.type-tile{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface-2);display:flex;flex-direction:column;gap:2px;min-width:0}
+.type-tile .lbl{font-size:13px}
+.type-tile .val{font-size:30px;font-weight:700;line-height:1.1}
+.type-tile .sub{font-size:12px;color:var(--ink-3)}
+.tbl tr.sub-row td{color:var(--ink-2);font-size:13px}
+.tbl tr.sub-row td:first-child{padding-left:14px}
+.tbl tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .look-card h2{margin:0}
 .look-card p{margin:0}
 .look-card .seg{align-self:flex-start}
@@ -1363,7 +1371,7 @@ function wrapText(s, w) {
   return out.length ? out : [''];
 }
 const LOGO_SRC = 'logo.png';
-const APP_VERSION = '2026-11-23d';
+const APP_VERSION = '2026-11-23e';
 // Remembers a logo that failed to load, so later receipts fall back to the shop name at once.
 const logoState = { failed: false };
 (() => { const im = new Image(); im.onerror = () => { logoState.failed = true; }; im.src = LOGO_SRC; })();
@@ -1520,8 +1528,14 @@ async function loadReport() {
   } catch (e) { if (token !== S.rep.token) return; S.rep.err = e; S.rep.days = null; }
   S.rep.loading = false; renderReport();
 }
+const isPizzaCat = c => /pizza/i.test(c || '');
+function itemCat(it) {
+  if (it.c) return it.c;
+  const m = S.menu.find(x => x.name === it.n);
+  return m ? catOf(m) : 'Lain-lain';
+}
 function aggregate(days) {
-  const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, staff: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
+  const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, staff: {}, cats: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
   for (const [date, doc] of Object.entries(days || {})) {
     for (const o of doc && doc.orders ? Object.values(doc.orders) : []) {
       const tot = toSen(o.total);
@@ -1530,8 +1544,12 @@ function aggregate(days) {
       const p = R.pay[o.pay] = R.pay[o.pay] || { n: 0, v: 0 }; p.n++; p.v += tot;
       const ch = R.ch[typeName(o)] = R.ch[typeName(o)] || { n: 0, v: 0 }; ch.n++; ch.v += tot;
       const sk = o.staff || 'Tiada nama';
-      const sf = R.staff[sk] = R.staff[sk] || { n: 0, q: 0, v: 0, cats: {} }; sf.n++; sf.v += tot;
-      for (const it of o.items || []) { sf.q += it.q; const ck = it.c || 'Lain-lain'; sf.cats[ck] = (sf.cats[ck] || 0) + it.q; }
+      const sf = R.staff[sk] = R.staff[sk] || { n: 0, q: 0, pizza: 0, v: 0, cats: {} }; sf.n++; sf.v += tot;
+      for (const it of o.items || []) {
+        const ck = itemCat(it);
+        sf.q += it.q; sf.cats[ck] = (sf.cats[ck] || 0) + it.q; if (isPizzaCat(ck)) sf.pizza += it.q;
+        const cx = R.cats[ck] = R.cats[ck] || { q: 0, v: 0 }; cx.q += it.q; cx.v += (toSen(it.p) + toSen(it.mp)) * it.q;
+      }
       const hr = R.byHour[new Date(o.t).getHours()]; hr.v += tot; hr.n++;
       const bd = R.byDay[date] = R.byDay[date] || { v: 0, n: 0 }; bd.v += tot; bd.n++;
       for (const it of o.items || []) {
@@ -1650,16 +1668,37 @@ function renderReport() {
         h('td', {}, h('div', { class: 'meter', role: 'img', 'aria-label': pct + '%' }, h('span', { style: `width:${pct}%` }))),
         h('td', { class: 'num', text: fmt(x.v) }));
     }))));
+  const catKeys = Object.keys(R.cats);
+  const pizzaCats = catKeys.filter(isPizzaCat).sort((a, b) => R.cats[b].q - R.cats[a].q);
+  const otherCats = catKeys.filter(c => !isPizzaCat(c)).sort((a, b) => (b === 'Minuman') - (a === 'Minuman') || R.cats[b].q - R.cats[a].q);
+  const sumOf = list => list.reduce((t, c) => ({ q: t.q + R.cats[c].q, v: t.v + R.cats[c].v }), { q: 0, v: 0 });
+  const pz = sumOf(pizzaCats), drinks = R.cats['Minuman'] || { q: 0, v: 0 };
+  const tile = (lbl, x, sub) => h('div', { class: 'type-tile' }, h('span', { class: 'lbl', text: lbl }), h('span', { class: 'val', text: x.q }), h('span', { class: 'sub', text: sub || RM(x.v) }));
+  const typeRows = [];
+  if (pizzaCats.length) {
+    typeRows.push(h('tr', {}, h('td', { text: 'Pizza' }), h('td', { class: 'num', text: pz.q }), h('td', { class: 'num', text: fmt(pz.v) })));
+    pizzaCats.forEach(c => typeRows.push(h('tr', { class: 'sub-row' }, h('td', { text: c }), h('td', { class: 'num', text: R.cats[c].q }), h('td', { class: 'num', text: fmt(R.cats[c].v) }))));
+  }
+  otherCats.forEach(c => typeRows.push(h('tr', {}, h('td', { text: c }), h('td', { class: 'num', text: R.cats[c].q }), h('td', { class: 'num', text: fmt(R.cats[c].v) }))));
+  typeRows.push(h('tr', { class: 'tot' }, h('td', { text: 'Jumlah item' }), h('td', { class: 'num', text: R.items }), h('td', { class: 'num', text: fmt(sumOf(catKeys).v) })));
+  const typeCard = catKeys.length ? h('section', { class: 'card' },
+    h('h2', { text: 'Pizza dan minuman' }), h('p', { class: 'cap', text: 'Item terjual ikut jenis. RM sebelum diskaun pesanan.' }),
+    h('div', { class: 'type-tiles' },
+      tile('Pizza', pz),
+      tile('Minuman', drinks)),
+    h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, h('th', { text: 'Jenis' }), h('th', { class: 'num', text: 'Qty' }), h('th', { class: 'num', text: 'RM' }))),
+      h('tbody', {}, typeRows))) : null;
   const staffKeys = Object.keys(R.staff).sort((a, b) => (a === 'Tiada nama') - (b === 'Tiada nama') || R.staff[b].q - R.staff[a].q);
   const showStaff = staffKeys.length > 1 || (staffKeys.length === 1 && staffKeys[0] !== 'Tiada nama');
   const staffCard = showStaff ? h('section', { class: 'card' },
     h('h2', { text: 'Ikut staf' }), h('p', { class: 'cap', text: 'Pesanan dibayar sahaja. Bawah nama: bilangan item ikut kategori.' }),
     h('table', { class: 'tbl' },
-      h('thead', {}, h('tr', {}, h('th', { text: 'Staf' }), h('th', { class: 'num', text: 'Pesanan' }), h('th', { class: 'num', text: 'Item' }), h('th', { class: 'num', text: 'RM' }))),
+      h('thead', {}, h('tr', {}, h('th', { text: 'Staf' }), h('th', { class: 'num', text: 'Pesanan' }), h('th', { class: 'num', text: 'Pizza' }), h('th', { class: 'num', text: 'Item' }), h('th', { class: 'num', text: 'RM' }))),
       h('tbody', {}, staffKeys.map(k => {
         const x = R.staff[k];
         const cats = Object.entries(x.cats).sort((a, b) => b[1] - a[1]).map(([c, q]) => `${c} ${q}`).join(' · ');
-        return h('tr', {}, h('td', {}, k, h('span', { class: 'staff-cats', text: cats })), h('td', { class: 'num', text: x.n }), h('td', { class: 'num', text: x.q }), h('td', { class: 'num', text: fmt(x.v) }));
+        return h('tr', {}, h('td', {}, k, h('span', { class: 'staff-cats', text: cats })), h('td', { class: 'num', text: x.n }), h('td', { class: 'num', text: x.pizza }), h('td', { class: 'num', text: x.q }), h('td', { class: 'num', text: fmt(x.v) }));
       })))) : null;
   const payCard = h('section', { class: 'card' },
     h('h2', { text: 'Kaedah bayaran' }), h('p', { class: 'cap', text: 'Bilangan pesanan dan jumlah (RM)' }),
@@ -1689,7 +1728,7 @@ function renderReport() {
 
   body.replaceChildren(kpis, h('div', { class: 'rep-grid' },
     h('div', { class: 'stack' }, chartCard, itemsCard),
-    h('div', { class: 'stack' }, staffCard, chCard, payCard, zCard)));
+    h('div', { class: 'stack' }, typeCard, staffCard, chCard, payCard, zCard)));
   barChart(chartHost, bars, `${single ? 'Kutipan ikut jam' : 'Kutipan ikut hari'}, ${period}`);
   S.rep.lastBars = { host: chartHost, bars, label: single ? 'Kutipan ikut jam' : 'Kutipan ikut hari' };
 }
