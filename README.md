@@ -103,6 +103,8 @@ URL kekal sama, jadi peranti tidak perlu disambung semula. Hanya jika PIN dituka
 
 Tekan **Cetak** pada resit. Pelayar akan membuka tetingkap cetak. Untuk printer thermal, pilih saiz kertas 58 mm atau 80 mm dalam tetingkap cetak, dan tetapkan lebar yang sama di **Tetapan → Resit**.
 
+Logo kedai dicetak di atas resit. Untuk menukarnya, ganti fail `logo.png` dalam repo ini dengan logo baharu (hitam di atas latar telus atau putih, lebar sekitar 480 piksel).
+
 Di Android, tetingkap cetak menggunakan khidmat cetak Android. Printer thermal Bluetooth biasanya perlukan aplikasi khidmat cetak daripada jenama printer itu, atau aplikasi khidmat cetak umum seperti RawBT dari Play Store. Selepas dipasang, printer itu akan muncul dalam senarai printer di tetingkap cetak.
 
 ## Had

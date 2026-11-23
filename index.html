@@ -324,6 +324,7 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
 .change.muted{color:var(--ink-3);font-family:var(--f-body);font-weight:500;font-size:14px}
 .paper{background:var(--paper);color:var(--paper-ink);border-radius:4px 4px 0 0;padding:16px 14px 18px;box-shadow:0 6px 18px rgba(0,0,0,.12);overflow-x:auto;position:relative;align-self:center;max-width:100%;margin-bottom:8px}
 .paper::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;background:radial-gradient(circle at 50% 100%,transparent 4.5px,var(--paper) 5px) 0 0/12px 8px repeat-x}
+.rc-logo{display:block;width:62%;max-width:190px;height:auto;margin:0 auto 10px}
 .receipt{margin:0;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;white-space:pre;color:var(--paper-ink)}
 .change-callout{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 14px;border-radius:10px;background:var(--kunyit);color:var(--kunyit-ink);font-weight:700}
 .change-callout strong{font-family:var(--f-display);font-size:28px;font-weight:800}
@@ -404,7 +405,8 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
   body{overflow:visible;height:auto;background:#fff}
   #app,.overlay,.toast{display:none!important}
   #print-area{display:block}
-  #print-area pre{font-family:var(--f-mono);font-size:9.5pt;line-height:1.35;white-space:pre;color:#000;margin:0}
+  #print-area img{display:block;width:62%;height:auto;margin:0 auto 2mm}
+  #print-area pre{font-family:var(--f-mono);line-height:1.35;white-space:pre;color:#000;margin:0}
 }
 </style>
 
@@ -1357,12 +1359,16 @@ function wrapText(s, w) {
   if (cur) out.push(cur);
   return out.length ? out : [''];
 }
-function receiptText(o, date) {
+const LOGO_SRC = 'logo.png';
+const logoState = { ok: false };
+(() => { const im = new Image(); im.onload = () => { logoState.ok = true; }; im.src = LOGO_SRC; })();
+function receiptText(o, date, opts) {
   const cfg = S.cfg, W_ = cfg.paper === '80' ? 42 : 32, L = [];
   const center = s => { s = s.slice(0, W_); return ' '.repeat(Math.max(0, Math.floor((W_ - s.length) / 2))) + s; };
   const lr = (l, r) => { const room = W_ - r.length - 1; if (l.length > room) l = l.slice(0, room); return l + ' '.repeat(Math.max(1, W_ - l.length - r.length)) + r; };
   const rule = '-'.repeat(W_);
-  wrapText((cfg.name || DEF.name).toUpperCase(), W_).forEach(x => L.push(center(x)));
+  // With the logo printed above, the shop name line would repeat it. Copied text keeps the name.
+  if (!(opts && opts.logo)) wrapText((cfg.name || DEF.name).toUpperCase(), W_).forEach(x => L.push(center(x)));
   String(cfg.address || '').split('\n').forEach(line => { if (line.trim()) wrapText(line, W_).forEach(x => L.push(center(x))); });
   if (cfg.phone) L.push(center('Tel: ' + cfg.phone));
   if (cfg.sstNo) L.push(center('No. SST: ' + cfg.sstNo));
@@ -1400,12 +1406,13 @@ function receiptText(o, date) {
 function showReceipt(o, date, fresh) {
   modal((box, close) => {
     box.style.width = 'min(460px, 100%)';
-    const text = receiptText(o, date);
-    const pre = h('pre', { class: 'receipt', text });
+    const text = receiptText(o, date), withLogo = logoState.ok;
+    const shown = withLogo ? receiptText(o, date, { logo: true }) : text;
+    const pre = h('pre', { class: 'receipt', text: shown });
     const acts = h('div', { class: 'modal-actions' });
     acts.append(h('button', { class: 'btn', type: 'button', onclick: () => copyText(text, pre) }, 'Salin teks'));
     if (canDownload()) acts.append(h('button', { class: 'btn', type: 'button', onclick: () => saveFile(`resit-${date}-${noStr(o.no).slice(1)}.txt`, text) }, 'Simpan .txt'));
-    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => printReceipt(text) }, 'Cetak'));
+    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => printReceipt(shown, withLogo) }, 'Cetak'));
     if (o.status !== 'void' && S.canWrite && S.mode !== 'nodb') {
       acts.append(h('button', { class: 'btn danger', type: 'button', onclick: e => armConfirm(e.currentTarget, 'Ketik lagi untuk batal', async () => {
         try {
@@ -1418,12 +1425,18 @@ function showReceipt(o, date, fresh) {
     box.append(
       mhead(fresh ? `Pesanan ${noStr(o.no)} selesai` : `Pesanan ${noStr(o.no)}`, `${fmtDate(date)} ${fmtTime(o.t)} · ${PAY[o.pay] || o.pay}${o.status === 'void' ? ' · DIBATALKAN' : ''}`),
       fresh && o.pay === 'cash' && toSen(o.chg) > 0 ? h('div', { class: 'change-callout' }, h('span', { text: 'Beri baki' }), h('strong', { text: RM(toSen(o.chg)) })) : null,
-      h('div', { class: 'paper' }, pre),
+      h('div', { class: 'paper' }, withLogo ? h('img', { class: 'rc-logo', src: LOGO_SRC, alt: S.cfg.name || 'Logo kedai' }) : null, pre),
       acts);
   });
 }
-function printReceipt(text) {
-  $('#print-area').replaceChildren(h('pre', { text }));
+async function printReceipt(text, withLogo) {
+  // Thermal paper prints about 48 mm (58 mm roll) or 72 mm (80 mm roll); size the text so a full line fits.
+  const wide = S.cfg.paper === '80', area = $('#print-area');
+  const pre = h('pre', { text }); pre.style.fontSize = wide ? '8.1pt' : '7.1pt';
+  const img = withLogo ? h('img', { src: LOGO_SRC, alt: '' }) : null;
+  area.style.width = wide ? '72mm' : '48mm';
+  area.replaceChildren(...(img ? [img] : []), pre);
+  if (img) { try { await img.decode(); } catch (e) {} }
   try { window.print(); } catch (e) {}
 }
 
