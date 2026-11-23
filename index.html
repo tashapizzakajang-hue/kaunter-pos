@@ -1,0 +1,1965 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kaunter POS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314201A'/%3E%3Ctext x='32' y='43' font-family='Arial' font-size='30' font-weight='700' fill='%23F2B300' text-anchor='middle'%3EK%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a kedai counter. Menu tiles on the left, a live docket on the right; one screen, each pane scrolls on its own. */
+:root{
+  --bg:#ECF1ED; --surface:#FFFFFF; --surface-2:#F4F7F4; --line:#D3DCD5; --line-2:#E4EAE5;
+  --ink:#14201A; --ink-2:#46564C; --ink-3:#6B7A71;
+  --accent:#0D6B4C; --accent-ink:#FFFFFF; --accent-soft:#D8ECE2;
+  --kunyit:#F2B300; --kunyit-hover:#E2A600; --kunyit-ink:#231900; --kunyit-soft:#FDF0C4;
+  --danger:#B8322A; --danger-soft:#F8E1DE;
+  --paper:#FFFEF7; --paper-ink:#1C1C1A; --paper-edge:#E6E3D6;
+  --shadow:0 1px 2px rgba(20,32,26,.06),0 4px 16px rgba(20,32,26,.06);
+  --scrim:rgba(14,22,18,.45);
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1310; --surface:#141C17; --surface-2:#1A241E; --line:#2A3830; --line-2:#212C25;
+    --ink:#E4ECE6; --ink-2:#A8B6AD; --ink-3:#83928A;
+    --accent:#43C08E; --accent-ink:#04140C; --accent-soft:#173A2B;
+    --kunyit:#F4C443; --kunyit-hover:#FFD25E; --kunyit-ink:#231900; --kunyit-soft:#3A300F;
+    --danger:#FF8A7E; --danger-soft:#3D1D19;
+    --paper:#F3F1E7; --paper-ink:#1C1C1A; --paper-edge:#2A3830;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+    --scrim:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1310; --surface:#141C17; --surface-2:#1A241E; --line:#2A3830; --line-2:#212C25;
+  --ink:#E4ECE6; --ink-2:#A8B6AD; --ink-3:#83928A;
+  --accent:#43C08E; --accent-ink:#04140C; --accent-soft:#173A2B;
+  --kunyit:#F4C443; --kunyit-hover:#FFD25E; --kunyit-ink:#231900; --kunyit-soft:#3A300F;
+  --danger:#FF8A7E; --danger-soft:#3D1D19;
+  --paper:#F3F1E7; --paper-ink:#1C1C1A; --paper-edge:#2A3830;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  --scrim:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+html{height:100%;box-sizing:border-box}
+body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.muted{color:var(--ink-3)} .small{font-size:13px}
+.mono{font-family:var(--f-mono)}
+
+#app{height:100%;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;padding-block:10px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{font-family:var(--f-display);font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--ink);color:var(--surface);padding:4px 8px;border-radius:4px}
+.brand-name{font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32vw}
+.nav{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.nav a{padding:7px 14px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.nav a:hover{color:var(--ink);background:var(--line-2)}
+.nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--ink-2);font-size:13px}
+.status{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+.status.ok::before{background:var(--accent)}
+.status.wait::before{background:var(--kunyit)}
+.status.bad::before{background:var(--danger)}
+.clock{font-variant-numeric:tabular-nums;white-space:nowrap}
+main{flex:1;min-height:0;position:relative}
+.view{height:100%}
+.scroll{overflow:auto}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px}
+.wrap.narrow{max-width:720px}
+
+/* POS */
+.pos{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,390px);gap:16px;padding-block:14px}
+.pos-menu{display:flex;flex-direction:column;min-height:0;min-width:0;gap:12px}
+.pos-tools{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.chip{border:1px solid var(--line);background:var(--surface);padding:7px 14px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;color:var(--ink-2)}
+.chip:hover{color:var(--ink);border-color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.search{width:220px;max-width:100%;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.tiles{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;align-content:start;padding-bottom:16px}
+.g-head{grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding-top:6px}
+.g-head:first-child{padding-top:0}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-height:96px;padding:12px 12px 10px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;transition:transform .08s,border-color .12s}
+.tile:hover{border-color:var(--ink-3)}
+.tile:active{transform:scale(.97)}
+.tile.in{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tile:disabled{cursor:not-allowed;opacity:.55;background:var(--surface-2)}
+.tile.pulse{animation:pulse .22s ease-out}
+@keyframes pulse{50%{transform:scale(.95)}}
+.t-name{flex:none;font-weight:600;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding-right:26px;overflow-wrap:anywhere}
+.t-foot{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-price{font-family:var(--f-mono);font-weight:500;font-size:14px;color:var(--ink-2)}
+.t-opt{font-size:11px;color:var(--ink-3);border:1px dashed var(--line);border-radius:4px;padding:0 5px}
+.t-off{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
+.t-badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:13px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.skel{min-height:96px;border-radius:var(--r);background:var(--surface-2);border:1px solid var(--line-2)}
+
+.ticket{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.tk-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px dashed var(--line)}
+.tk-title{flex:1;min-width:0}
+.eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.tk-title h2{margin:0;font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticket .tk-back{display:none}
+.tk-meta{display:flex;gap:10px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-weight:600;font-size:14px;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--accent)}
+.ref{display:flex;align-items:center;gap:8px;flex:1;min-width:150px;font-size:13px;color:var(--ink-2);font-weight:600}
+.ref input{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.tk-lines{flex:1;min-height:0;overflow:auto;padding:2px 8px}
+.line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px}
+.line + .line{border-top:1px solid var(--line-2)}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.qty button{width:32px;height:32px;border:0;background:var(--surface-2);cursor:pointer;font-size:17px;font-weight:600;color:var(--ink)}
+.qty button:hover{background:var(--line-2)}
+.qty button.rm{color:var(--danger)}
+.qty span{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.line-main{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:0;background:none;padding:2px 0;cursor:pointer;min-width:0;border-radius:6px}
+.ln-name{font-weight:600;overflow-wrap:anywhere}
+.ln-sub{font-size:12.5px;color:var(--ink-3);overflow-wrap:anywhere}
+.ln-amt{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.tk-empty{padding:28px 18px;text-align:center;color:var(--ink-2);display:flex;flex-direction:column;gap:6px}
+.tk-empty p{margin:0}
+.tk-foot{border-top:1px dashed var(--line);padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.tk-links{display:flex;gap:18px;flex-wrap:wrap}
+.apps{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%}
+.apps .lbl{margin-right:4px}
+.chip.sm{padding:5px 12px;font-size:13px}
+.disc-ctl{display:flex;align-items:center;gap:8px}
+.disc-ctl .lbl{margin-right:auto}
+.disc-ctl input{width:92px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-family:var(--f-mono);text-align:right}
+.sums{margin:0;display:grid;grid-template-columns:1fr auto;gap:3px 0;font-size:14px}
+.sums dt{color:var(--ink-2)}
+.sums dd{margin:0;padding-left:12px;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sums .grand{font-family:var(--f-display);font-weight:800;font-size:26px;color:var(--ink);padding-top:6px;border-top:1px solid var(--line);margin-top:4px;line-height:1.2}
+.sums dt.grand{font-size:15px;font-family:var(--f-body);font-weight:700;display:flex;align-items:flex-end;padding-bottom:4px}
+.tk-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cartbar{display:none}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--ink-3)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:13.5px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:var(--danger-soft);background:var(--danger-soft)}
+.btn[data-armed]{background:var(--danger);border-color:var(--danger);color:var(--surface)}
+.btn.pay{width:100%;padding:14px 18px;font-size:18px;font-family:var(--f-display);font-weight:800;background:var(--kunyit);border-color:var(--kunyit);color:var(--kunyit-ink);justify-content:space-between;border-radius:11px}
+.btn.pay:hover:not(:disabled){background:var(--kunyit-hover);border-color:var(--kunyit-hover)}
+.btn.pay:disabled{opacity:.5}
+.count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--kunyit);color:var(--kunyit-ink);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.count.zero{background:var(--line-2);color:var(--ink-3)}
+.link{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;text-align:left;font-size:14px}
+.x{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--ink-3);padding:2px 8px;border-radius:6px}
+.x:hover{background:var(--surface-2);color:var(--ink)}
+
+/* Views */
+.view-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.view-head h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:28px;letter-spacing:-.01em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.date-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-variant-numeric:tabular-nums}
+.sumline{margin:0 0 12px;color:var(--ink-2)}
+.sumline strong{color:var(--ink)}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.tbl th{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl .num{text-align:right;font-family:var(--f-mono);white-space:nowrap}
+.tbl th.num{font-family:var(--f-body)}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover{background:var(--surface-2)}
+.tbl tr.void td{color:var(--ink-3)}
+.tbl tr.void td.num{text-decoration:line-through}
+.tbl .items{min-width:180px;max-width:340px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill.paid{background:var(--accent-soft);color:var(--ink)}
+.pill.void{background:var(--danger-soft);color:var(--danger)}
+.no-btn{border:0;background:none;font-family:var(--f-mono);font-weight:600;color:var(--accent);cursor:pointer;padding:0;font-size:14px}
+.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:12px;padding:30px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--ink-2);background:var(--surface)}
+.empty h3{margin:0;font-family:var(--f-display);font-size:18px;color:var(--ink)}
+.empty p{margin:0;max-width:46ch}
+.notice{padding:10px 14px;border-radius:10px;background:var(--kunyit-soft);color:var(--ink);font-size:14px;margin:0}
+
+/* Report */
+.filters{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filters .chips{flex:0 1 auto}
+.range{display:flex;gap:6px;align-items:center;color:var(--ink-3);flex-wrap:wrap}
+.period{margin:0 0 12px;color:var(--ink-2);font-weight:600}
+.kpis{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:12px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .lbl{font-size:13px;color:var(--ink-2);font-weight:600}
+.kpi .val{font-weight:700;font-size:26px;line-height:1.2;overflow-wrap:anywhere}
+.kpi .sub{font-size:12.5px;color:var(--ink-3)}
+.kpi.hero{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.kpi.hero .lbl,.kpi.hero .sub{color:inherit;opacity:.75}
+.kpi.hero .val{font-size:40px}
+.rep-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h2{margin:0 0 4px;font-size:15px;font-weight:700}
+.card .cap{font-size:12.5px;color:var(--ink-3);margin:0 0 12px}
+.card .tbl td,.card .tbl th{padding:8px 6px}
+.card .tbl th:first-child,.card .tbl td:first-child{padding-left:0}
+.card .tbl th:last-child,.card .tbl td:last-child{padding-right:0}
+.chart-host{position:relative;width:100%;min-height:220px}
+.chart{display:block;max-width:100%}
+.chart .gl{stroke:var(--line-2);stroke-width:1}
+.chart .base{stroke:var(--line);stroke-width:1}
+.chart .tick{fill:var(--ink-3);font-size:11px;font-family:var(--f-body)}
+.chart .bar{fill:var(--accent);pointer-events:none}
+.chart .hit{fill:transparent;outline:none;cursor:default}
+.chart .hit.on{fill:var(--line-2)}
+.tip{position:absolute;transform:translate(-50%,-100%);background:var(--ink);color:var(--surface);padding:6px 10px;border-radius:8px;font-size:12.5px;pointer-events:none;display:flex;flex-direction:column;white-space:nowrap;z-index:2}
+.tip strong{font-size:14px}
+.meter{height:6px;background:var(--line-2);border-radius:999px;overflow:hidden;min-width:56px}
+.meter span{display:block;height:100%;background:var(--accent);border-radius:999px}
+.zrows{margin:0;display:grid;grid-template-columns:1fr auto;gap:6px 0;font-size:14px}
+.zrows dt{color:var(--ink-2)}
+.zrows dd{margin:0;padding-left:12px;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.zrows .tot{font-weight:700;color:var(--ink);border-top:1px solid var(--line);padding-top:8px}
+.callout{margin-top:12px;padding:10px 12px;border-radius:9px;background:var(--kunyit-soft);display:flex;justify-content:space-between;gap:10px;font-size:14px;flex-wrap:wrap}
+.callout strong{font-family:var(--f-mono)}
+.stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* Menu admin */
+.mgroup{margin-bottom:20px}
+.mgroup h2{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.mrows{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.mrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;grid-template-areas:"mv main price sw edit";gap:6px 14px;align-items:center;padding:10px 14px 10px 10px}
+.mrow > .mv{grid-area:mv}
+.mrow > .mrow-main{grid-area:main}
+.mrow > .price{grid-area:price}
+.mrow > .switch{grid-area:sw}
+.mrow > .edit{grid-area:edit}
+.mv{display:flex;flex-direction:column;gap:3px}
+.mv button{width:28px;height:22px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface-2);border-radius:5px;cursor:pointer;font-size:10px;line-height:1;color:var(--ink-2);padding:0}
+.mv button:hover:not(:disabled){color:var(--ink);border-color:var(--ink-3)}
+.mv button:disabled{opacity:.3;cursor:default}
+.mrow + .mrow{border-top:1px solid var(--line-2)}
+.mrow-main{display:flex;flex-direction:column;min-width:0}
+.mrow-main strong{overflow-wrap:anywhere}
+.mrow.off .mrow-main strong{color:var(--ink-3)}
+.mrow .price{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.switch{display:inline-flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;padding:4px;font-size:13px;font-weight:600;color:var(--ink-2);border-radius:6px}
+.switch:disabled{cursor:not-allowed;opacity:.6}
+.switch .knob{width:36px;height:20px;border-radius:999px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.switch .knob::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch[aria-checked="true"] .knob{background:var(--accent)}
+.switch[aria-checked="true"] .knob::after{transform:translateX(16px)}
+.sw-lbl{min-width:40px;text-align:left}
+
+/* Forms */
+.form{display:flex;flex-direction:column;gap:14px}
+.form fieldset{border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;margin:0;display:flex;flex-direction:column;gap:12px;background:var(--surface);min-width:0}
+.form fieldset:disabled{opacity:.75}
+.form legend{font-weight:700;padding:0 6px;font-size:14px}
+.form label,.field{display:flex;flex-direction:column;gap:5px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.form input:not([type=checkbox]),.form textarea,.form select,.field input{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-weight:400;color:var(--ink);width:100%}
+.form textarea{resize:vertical}
+.form label.check{flex-direction:row;align-items:center;gap:10px;color:var(--ink)}
+.form label.check input{width:18px;height:18px;accent-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:12.5px;color:var(--ink-3);margin:0;font-weight:400}
+.err{color:var(--danger);font-size:13.5px;margin:0}
+.err:empty{display:none}
+.form-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.about{margin-top:20px;font-size:13.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px}
+.about p{margin:0}
+.about h2{margin:0;font-size:14px;color:var(--ink)}
+
+/* Modal */
+.overlay{position:fixed;inset:0;z-index:60;background:var(--scrim);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{width:min(480px,100%);max-height:100%;overflow:auto;background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:18px 18px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-head{display:flex;align-items:flex-start;gap:10px}
+.modal-head > div{flex:1;min-width:0}
+.modal-head h2{margin:0;font-family:var(--f-display);font-weight:800;font-size:21px;line-height:1.2;overflow-wrap:anywhere}
+.modal-head .sub{font-size:13px;color:var(--ink-3);font-family:var(--f-mono)}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.modal-actions .grow{flex:1}
+.lbl{font-size:13px;font-weight:600;color:var(--ink-2)}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{display:inline-flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer;font-weight:600;color:var(--ink)}
+.opt .mono{font-size:12.5px;color:var(--ink-3);font-weight:500}
+.opt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.opt[aria-pressed="true"] .mono{color:var(--ink-2)}
+.qty-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stepper button{width:44px;height:44px;border:0;background:var(--surface-2);font-size:20px;cursor:pointer;color:var(--ink)}
+.stepper .qv{min-width:44px;text-align:center;font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.pay-total{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1.05}
+.methods{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.methods button{padding:12px 6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-weight:700;cursor:pointer;color:var(--ink);font-size:14px}
+.methods button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.cashbox{display:flex;flex-direction:column;gap:10px}
+.cashbox input{font-family:var(--f-mono);font-size:24px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);width:100%}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.change{font-family:var(--f-display);font-weight:800;font-size:22px}
+.change.good{color:var(--accent)}
+.change.bad{color:var(--danger)}
+.change.muted{color:var(--ink-3);font-family:var(--f-body);font-weight:500;font-size:14px}
+.paper{background:var(--paper);color:var(--paper-ink);border-radius:4px 4px 0 0;padding:16px 14px 18px;box-shadow:0 6px 18px rgba(0,0,0,.12);overflow-x:auto;position:relative;align-self:center;max-width:100%;margin-bottom:8px}
+.paper::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;background:radial-gradient(circle at 50% 100%,transparent 4.5px,var(--paper) 5px) 0 0/12px 8px repeat-x}
+.receipt{margin:0;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;white-space:pre;color:var(--paper-ink)}
+.change-callout{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 14px;border-radius:10px;background:var(--kunyit);color:var(--kunyit-ink);font-weight:700}
+.change-callout strong{font-family:var(--f-display);font-size:28px;font-weight:800}
+.held-list{display:flex;flex-direction:column;gap:8px}
+.held{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px}
+.held .meta{font-size:13px;color:var(--ink-3)}
+.held .acts{display:flex;gap:6px;grid-row:span 2}
+.held strong{font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:80;transition:opacity .18s,transform .18s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.err{background:var(--danger);color:var(--surface)}
+#print-area{display:none}
+.mg-head{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.mg-head h2{margin:0}
+.mg-head .mv{flex-direction:row;margin-left:auto}
+.gsbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gsbar > span{flex:1;min-width:200px}
+.gs-card{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+.look-card{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.look-card h2{margin:0}
+.look-card p{margin:0}
+.look-card .seg{align-self:flex-start}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.swatch{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font-weight:600;color:var(--ink);text-align:left}
+.swatch:hover:not(:disabled){border-color:var(--ink-3)}
+.swatch:disabled{cursor:default}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.sw-dots{display:inline-flex;flex:none}
+.sw-dots span{width:20px;height:20px;border-radius:50%;border:2px solid var(--surface)}
+.sw-dots span + span{margin-left:-7px}
+.gs-card h2{margin:0}
+.gs-card p{margin:0}
+.gs-link{display:flex;gap:8px;flex-wrap:wrap}
+.gs-link input{flex:1;min-width:200px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.gs-status{color:var(--ink-2)}
+.gs-status.bad{color:var(--danger)}
+.conn-form{display:flex;flex-direction:column;gap:10px}
+.link-out{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font-family:var(--f-mono);font-size:12px}
+#conn-card{margin:0 0 16px}
+
+@media (max-width:900px){
+  .rep-grid{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi.hero{grid-column:1/-1}
+}
+@media (max-width:820px){
+  .topbar .nav{order:3;width:100%}
+  .nav a{flex:1;text-align:center;padding:7px 2px;font-size:13px}
+  .brand-name{max-width:46vw}
+  .pos{grid-template-columns:minmax(0,1fr)}
+  .tiles{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .search{width:100%}
+  .ticket{position:fixed;inset:0;z-index:40;border-radius:0;border:0;transform:translateY(100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  .ticket.open{transform:none;visibility:visible;transition:transform .22s ease}
+  .tk-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .ticket .tk-back{display:inline-flex}
+  .cartbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;align-items:center;gap:12px;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--ink);color:var(--surface);border:0;font-weight:600;cursor:pointer;text-align:left}
+  .cartbar .cb-total{margin-left:auto;font-family:var(--f-display);font-weight:800;font-size:18px}
+}
+@media (max-width:560px){
+  .two{grid-template-columns:1fr}
+  .mrow{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"mv main price" "mv sw edit"}
+  .methods{grid-template-columns:1fr 1fr}
+  .clock{display:none}
+  .view-head h1{font-size:24px}
+  .kpi.hero .val{font-size:34px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+@media print{
+  @page{margin:3mm}
+  body{overflow:visible;height:auto;background:#fff}
+  #app,.overlay,.toast{display:none!important}
+  #print-area{display:block}
+  #print-area pre{font-family:var(--f-mono);font-size:9.5pt;line-height:1.35;white-space:pre;color:#000;margin:0}
+}
+</style>
+
+</head>
+<body>
+<div id="app">
+  <header class="topbar gut">
+    <div class="brand"><span class="brand-mark">Kaunter</span><span class="brand-name" id="brand-name">Kedai Anda</span></div>
+    <nav class="nav" aria-label="Bahagian">
+      <a href="#jualan" id="tab-jualan">Jualan</a>
+      <a href="#pesanan" id="tab-pesanan">Pesanan</a>
+      <a href="#laporan" id="tab-laporan">Laporan</a>
+      <a href="#menu" id="tab-menu">Menu</a>
+      <a href="#tetapan" id="tab-tetapan">Tetapan</a>
+    </nav>
+    <div class="top-right"><span class="clock" id="clock"></span><span class="status wait" id="status"><span id="status-txt">Menyambung…</span></span></div>
+  </header>
+
+  <main>
+    <section class="view pos gut" id="view-jualan" aria-label="Jualan">
+      <div class="pos-menu">
+        <div class="pos-tools">
+          <div class="chips" id="cat-chips" role="group" aria-label="Kategori"></div>
+          <input type="search" class="search" id="q" placeholder="Cari item…" autocomplete="off" aria-label="Cari item">
+        </div>
+        <p class="notice" id="pos-notice" hidden></p>
+        <div class="tiles" id="tiles" aria-live="polite"></div>
+      </div>
+
+      <aside class="ticket" id="ticket" aria-label="Pesanan semasa">
+        <div class="tk-head">
+          <button class="btn sm ghost tk-back" id="tk-back" type="button">← Menu</button>
+          <div class="tk-title"><span class="eyebrow" id="tk-eyebrow">Pesanan baru</span><h2 id="tk-title">#001</h2></div>
+          <button class="btn sm ghost" id="btn-held" type="button">Tertangguh <span class="count zero" id="held-count">0</span></button>
+        </div>
+        <div class="tk-meta">
+          <div class="seg" role="group" aria-label="Jenis pesanan">
+            <button type="button" id="type-shop" aria-pressed="true">Kedai</button>
+            <button type="button" id="type-pickup" aria-pressed="false">Pickup</button>
+            <button type="button" id="type-app" aria-pressed="false">Apps</button>
+          </div>
+          <label class="ref"><span id="ref-label">Nama</span><input id="t-ref" autocomplete="off" maxlength="40" placeholder="pilihan"></label>
+          <div class="apps" id="app-row" role="group" aria-label="Platform" hidden>
+            <span class="lbl">Platform</span>
+            <button type="button" class="chip sm" data-app="Grab" aria-pressed="false">Grab</button>
+            <button type="button" class="chip sm" data-app="Shopee" aria-pressed="false">Shopee</button>
+            <button type="button" class="chip sm" data-app="Foodpanda" aria-pressed="false">Foodpanda</button>
+          </div>
+        </div>
+        <div class="tk-lines" id="tk-lines"></div>
+        <div class="tk-foot">
+          <div class="tk-links" id="tk-links"><button class="link" id="disc-toggle" type="button">+ Diskaun</button><button class="link" id="del-toggle" type="button">+ Caj delivery</button></div>
+          <div class="disc-ctl" id="disc-ctl" hidden>
+            <span class="lbl">Diskaun</span>
+            <div class="seg" role="group" aria-label="Jenis diskaun">
+              <button type="button" id="disc-pct" aria-pressed="true">%</button>
+              <button type="button" id="disc-amt" aria-pressed="false">RM</button>
+            </div>
+            <input id="t-disc" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Nilai diskaun">
+            <button class="x" id="disc-x" type="button" aria-label="Buang diskaun">×</button>
+          </div>
+          <div class="disc-ctl" id="del-ctl" hidden>
+            <span class="lbl">Caj delivery (RM)</span>
+            <input id="t-del" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Caj delivery dalam RM">
+            <button class="x" id="del-x" type="button" aria-label="Buang caj delivery">×</button>
+          </div>
+          <dl class="sums" id="tk-sums"></dl>
+          <div class="tk-actions">
+            <button class="btn" id="btn-clear" type="button">Kosongkan</button>
+            <button class="btn" id="btn-hold" type="button">Simpan dulu</button>
+          </div>
+          <button class="btn pay" id="btn-pay" type="button"><span id="pay-lbl">Bayar</span><span id="pay-amt">RM 0.00</span></button>
+        </div>
+      </aside>
+
+      <button class="cartbar" id="cartbar" type="button"><span id="cb-count">Pesanan kosong</span><span class="cb-total" id="cb-total">RM 0.00</span><span aria-hidden="true">→</span></button>
+    </section>
+
+    <section class="view scroll" id="view-pesanan" aria-label="Pesanan" hidden>
+      <div class="wrap gut">
+        <div class="view-head">
+          <h1>Pesanan</h1>
+          <div class="date-nav">
+            <button class="btn sm" id="od-prev" type="button" aria-label="Hari sebelumnya">‹</button>
+            <input type="date" id="od-date" aria-label="Tarikh">
+            <button class="btn sm" id="od-next" type="button" aria-label="Hari berikutnya">›</button>
+            <button class="btn sm" id="od-today" type="button">Hari ini</button>
+          </div>
+        </div>
+        <p class="sumline" id="od-sum"></p>
+        <div id="od-body"></div>
+      </div>
+    </section>
+
+    <section class="view scroll" id="view-laporan" aria-label="Laporan" hidden>
+      <div class="wrap gut">
+        <div class="view-head">
+          <h1>Laporan</h1>
+          <div class="row"><a class="btn sm" id="rep-gs" href="#" target="_blank" rel="noopener" hidden>Buka Google Sheet</a><button class="btn sm" id="rep-csv" type="button">Eksport CSV</button></div>
+        </div>
+        <div class="filters">
+          <div class="chips" id="rep-chips" role="group" aria-label="Tempoh"></div>
+          <div class="range"><input type="date" id="rep-from" aria-label="Dari tarikh"><span>hingga</span><input type="date" id="rep-to" aria-label="Hingga tarikh"></div>
+        </div>
+        <div id="rep-body"></div>
+      </div>
+    </section>
+
+    <section class="view scroll" id="view-menu" aria-label="Menu" hidden>
+      <div class="wrap gut">
+        <div class="view-head">
+          <h1>Menu</h1>
+          <div class="row">
+            <input type="search" class="search" id="mq" placeholder="Cari item…" autocomplete="off" aria-label="Cari dalam menu">
+            <button class="btn primary" id="btn-add-item" type="button">+ Tambah item</button>
+          </div>
+        </div>
+        <div id="menu-list"></div>
+      </div>
+    </section>
+
+    <section class="view scroll" id="view-tetapan" aria-label="Tetapan" hidden>
+      <div class="wrap narrow gut">
+        <div class="view-head"><h1>Tetapan</h1></div>
+        <section class="card gs-card" id="conn-card" aria-labelledby="conn-h">
+          <h2 id="conn-h">Sambungan Google Sheets</h2>
+          <p class="small gs-status" id="conn-status"></p>
+          <div class="conn-form" id="conn-form">
+            <label class="field">URL skrip (Web app)<input id="c-url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+            <label class="field">PIN<input id="c-pin" type="password" autocomplete="off" inputmode="numeric"></label>
+            <div class="row"><button class="btn sm primary" id="c-save" type="button">Sambung</button></div>
+          </div>
+          <div class="row" id="conn-actions" hidden>
+            <a class="btn sm" id="c-open" href="#" target="_blank" rel="noopener" hidden>Buka Google Sheet</a>
+            <button class="btn sm" id="c-sync" type="button">Segerak sekarang</button>
+            <button class="btn sm" id="c-copy" type="button">Salin pautan untuk peranti lain</button>
+            <button class="btn sm" id="c-off" type="button">Putuskan peranti ini</button>
+          </div>
+          <input class="link-out" id="c-link" readonly hidden aria-label="Pautan persediaan untuk peranti lain">
+          <p class="hint">Pautan untuk peranti lain mengandungi URL skrip dan PIN. Hantar hanya kepada pekerja kedai anda.</p>
+        </section>
+        <form class="form" id="set-form" novalidate>
+          <fieldset id="set-fs">
+            <legend>Kedai</legend>
+            <label>Nama kedai <input id="s-name" maxlength="60" autocomplete="off"></label>
+            <label>Alamat <textarea id="s-address" rows="2" maxlength="200"></textarea></label>
+            <div class="two">
+              <label>Telefon <input id="s-phone" maxlength="30" autocomplete="off"></label>
+              <label>No. pendaftaran SST <input id="s-sstno" maxlength="30" autocomplete="off" placeholder="Jika berdaftar"></label>
+            </div>
+          </fieldset>
+          <fieldset id="set-fs2">
+            <legend>Cukai dan caj</legend>
+            <div class="two">
+              <label>Cukai perkhidmatan SST (%) <input id="s-sst" inputmode="decimal" autocomplete="off" placeholder="0"></label>
+              <label>Caj perkhidmatan (%) <input id="s-svc" inputmode="decimal" autocomplete="off" placeholder="0"></label>
+            </div>
+            <p class="hint">Biarkan 0 jika kedai tidak mengenakan SST atau caj perkhidmatan. SST dikira atas jumlah selepas diskaun dan caj perkhidmatan.</p>
+            <label class="check"><input type="checkbox" id="s-round"> Bundarkan bayaran tunai ke 5 sen terdekat</label>
+            <p class="hint">Ikut mekanisme pembundaran BNM: 1–2 sen turun, 3–4 sen naik ke 5, 6–7 sen turun ke 5, 8–9 sen naik. Bayaran kad dan e-wallet tidak dibundarkan.</p>
+          </fieldset>
+          <fieldset id="set-fs3">
+            <legend>Resit</legend>
+            <label>Lebar kertas resit
+              <select id="s-paper"><option value="58">58 mm (32 aksara)</option><option value="80">80 mm (42 aksara)</option></select>
+            </label>
+            <label>Nota kaki resit <textarea id="s-footer" rows="2" maxlength="160"></textarea></label>
+          </fieldset>
+          <p class="err" id="s-err" role="alert"></p>
+          <div class="form-actions"><button class="btn primary" type="submit" id="s-save">Simpan tetapan</button></div>
+        </form>
+        <section class="card look-card" aria-labelledby="look-h">
+          <h2 id="look-h">Rupa</h2>
+          <div class="field"><span class="lbl">Tema warna</span><div class="swatches" id="swatches" role="group" aria-label="Tema warna"></div></div>
+          <p class="hint" id="theme-note"></p>
+          <div class="field"><span class="lbl">Mod paparan pada peranti ini</span>
+            <div class="seg" role="group" aria-label="Mod paparan" id="mode-seg">
+              <button type="button" data-mode="auto">Ikut peranti</button>
+              <button type="button" data-mode="light">Cerah</button>
+              <button type="button" data-mode="dark">Gelap</button>
+            </div>
+          </div>
+        </section>
+        <section class="about" id="data-about"></section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="print-area"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const c of kids.flat(Infinity)) {
+    if (c == null || c === false) continue;
+    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'value') el.value = v;
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else if (typeof v !== 'string' && k in el) el[k] = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  return el;
+}
+function sv(tag, attrs, ...kids) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  kids.forEach(k => el.append(k));
+  return el;
+}
+const DAYS = ['Ahad','Isnin','Selasa','Rabu','Khamis','Jumaat','Sabtu'];
+const MON = ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogo','Sep','Okt','Nov','Dis'];
+const pad = n => String(n).padStart(2, '0');
+const dkey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return dkey(d); };
+const dayDiff = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 86400000);
+const fmtDate = k => { const [y, m, d] = k.split('-'); return `${d}/${m}/${y}`; };
+const longDate = k => { const d = parseKey(k); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; };
+const shortDate = k => { const d = parseKey(k); return `${d.getDate()} ${MON[d.getMonth()]}`; };
+const fmtTime = t => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+/* Money is computed in sen (integers) and stored in RM with 2 decimals. */
+const toSen = x => Math.round((parseFloat(String(x ?? '').replace(/[,\sRMrm]/g, '')) || 0) * 100);
+const r2 = s => Math.round(s) / 100;
+function fmt(s) { s = Math.round(s); const neg = s < 0; s = Math.abs(s); return (neg ? '-' : '') + Math.floor(s / 100).toLocaleString('en-US') + '.' + pad(s % 100); }
+const RM = s => 'RM ' + fmt(s);
+const LOCK_ID = Math.random().toString(36).slice(2, 12);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const noStr = n => '#' + String(n || 0).padStart(3, '0');
+const clone = o => JSON.parse(JSON.stringify(o));
+
+const PAY = { cash: 'Tunai', card: 'Kad', qr: 'DuitNow QR', ewallet: 'e-Wallet', app: 'Apps' };
+const TYPES = { shop: 'Kedai', pickup: 'Pickup', app: 'Apps', dine: 'Makan sini', take: 'Bungkus' };
+const ORDER_TYPES = ['shop', 'pickup', 'app'];
+const APPS = ['Grab', 'Shopee', 'Foodpanda'];
+const typeName = o => (o.type === 'app' ? (o.app || 'Apps') : (TYPES[o.type] || 'Kedai'));
+
+/* ---------- themes ---------- */
+// Each theme sets the same tokens as :root, once for light and once for dark. "kunyit" is the Pay button colour.
+const T = (bg, surface, surface2, line, line2, ink, ink2, ink3, accent, accentInk, accentSoft, pay, payHover, payInk, paySoft) =>
+  ({ bg, surface, 'surface-2': surface2, line, 'line-2': line2, ink, 'ink-2': ink2, 'ink-3': ink3, accent, 'accent-ink': accentInk, 'accent-soft': accentSoft, kunyit: pay, 'kunyit-hover': payHover, 'kunyit-ink': payInk, 'kunyit-soft': paySoft });
+const THEMES = {
+  hijau: { name: 'Hijau',
+    light: T('#ECF1ED', '#FFFFFF', '#F4F7F4', '#D3DCD5', '#E4EAE5', '#14201A', '#46564C', '#6B7A71', '#0D6B4C', '#FFFFFF', '#D8ECE2', '#F2B300', '#E2A600', '#231900', '#FDF0C4'),
+    dark: T('#0D1310', '#141C17', '#1A241E', '#2A3830', '#212C25', '#E4ECE6', '#A8B6AD', '#83928A', '#43C08E', '#04140C', '#173A2B', '#F4C443', '#FFD25E', '#231900', '#3A300F') },
+  tomato: { name: 'Merah tomato',
+    light: T('#F6F1EE', '#FFFFFF', '#FAF5F2', '#E3D6D0', '#EFE6E1', '#2A1815', '#5E4740', '#86706A', '#C0392B', '#FFFFFF', '#F8DEDA', '#F4B63F', '#E8A82C', '#2B1D00', '#FDEFCF'),
+    dark: T('#150E0D', '#1E1513', '#261B18', '#3A2A26', '#2C201D', '#F2E8E5', '#C4B0AA', '#97827C', '#F06A5A', '#2A0805', '#4A1E19', '#F6C453', '#FFD36E', '#2B1D00', '#3D2F10') },
+  biru: { name: 'Biru',
+    light: T('#EEF2F8', '#FFFFFF', '#F4F7FB', '#D3DBE7', '#E4E9F1', '#131C2B', '#45526A', '#69758D', '#1F5FBF', '#FFFFFF', '#DCE7F8', '#FFB020', '#F0A10F', '#261800', '#FFF0CC'),
+    dark: T('#0C111A', '#131A26', '#19212F', '#2A3547', '#212B3A', '#E5ECF6', '#A8B5C9', '#7F8CA2', '#6FA2F2', '#06142B', '#1B2E4D', '#FFC04D', '#FFCF70', '#261800', '#3A2E10') },
+  ungu: { name: 'Ungu',
+    light: T('#F2EFF7', '#FFFFFF', '#F7F4FB', '#DDD5E8', '#EAE4F2', '#1E1529', '#534766', '#7A6E8D', '#6B3FA0', '#FFFFFF', '#E7DCF5', '#F2B300', '#E2A600', '#231900', '#FDF0C4'),
+    dark: T('#110D17', '#19131F', '#201928', '#352B42', '#282031', '#EDE6F5', '#B7AAC8', '#8D80A0', '#B08BE8', '#1A0B2E', '#33224A', '#F4C443', '#FFD25E', '#231900', '#3A300F') },
+  oren: { name: 'Oren & arang',
+    light: T('#F3F2F0', '#FFFFFF', '#F7F6F4', '#DCD9D4', '#E9E6E2', '#1C1A17', '#514C45', '#78726A', '#D9480F', '#FFFFFF', '#FCE3D6', '#1C1A17', '#34302B', '#FFFFFF', '#FFF1E6'),
+    dark: T('#121110', '#1A1917', '#22201D', '#34312D', '#2A2825', '#EEEBE6', '#B5AFA6', '#8C867D', '#FF8A4C', '#2A0E00', '#46230F', '#FF8A4C', '#FFA06D', '#2A0E00', '#3A2414') },
+  jambu: { name: 'Merah jambu',
+    light: T('#F8F0F3', '#FFFFFF', '#FBF5F7', '#E8D5DD', '#F1E5EA', '#2A1420', '#604553', '#896D7C', '#C2185B', '#FFFFFF', '#F9DCE7', '#C2185B', '#A8144E', '#FFFFFF', '#FCE6EE'),
+    dark: T('#150C11', '#1E1319', '#261A21', '#3D2A34', '#2E2028', '#F5E8EE', '#C9AEBB', '#9C8290', '#F06292', '#2E0516', '#4A1C2F', '#F06292', '#F47FA6', '#2E0516', '#3E1A2A') },
+};
+const store_ = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+let viewMode = ['light', 'dark'].includes(store_('kaunter-mode')) ? store_('kaunter-mode') : 'auto';
+const darkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function isDark() {
+  if (viewMode !== 'auto') return viewMode === 'dark';
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t === 'dark' || t === 'light') return t === 'dark';
+  return !!(darkMq && darkMq.matches);
+}
+function themeKey() {
+  const k = S.cfg && S.cfg.theme;
+  if (k && THEMES[k]) return k;
+  const c = store_('kaunter-palette');
+  return c && THEMES[c] ? c : 'hijau';
+}
+function applyTheme() {
+  const key = themeKey(), dark = isDark(), set = THEMES[key][dark ? 'dark' : 'light'], st = document.documentElement.style;
+  for (const k in set) st.setProperty('--' + k, set[k]);
+  st.setProperty('color-scheme', dark ? 'dark' : 'light');
+  store_('kaunter-palette', key);
+}
+function renderLook() {
+  const cur = themeKey(), dark = isDark(), can = S.canAdmin && !!S.store;
+  $('#swatches').replaceChildren(...Object.entries(THEMES).map(([k, th]) => {
+    const v = th[dark ? 'dark' : 'light'];
+    return h('button', { class: 'swatch', type: 'button', 'aria-pressed': k === cur ? 'true' : 'false', disabled: !can && k !== cur, onclick: () => chooseTheme(k) },
+      h('span', { class: 'sw-dots', 'aria-hidden': 'true' }, h('span', { style: `background:${v.accent}` }), h('span', { style: `background:${v.kunyit}` }), h('span', { style: `background:${v.bg}` })),
+      th.name);
+  }));
+  $('#theme-note').textContent = can ? 'Tema digunakan pada semua peranti kedai.' : 'Hanya Editor atau pemilik kaunter boleh tukar tema.';
+  document.querySelectorAll('#mode-seg [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === viewMode ? 'true' : 'false'));
+}
+async function chooseTheme(k) {
+  if (!THEMES[k] || !S.canAdmin || !S.store || k === themeKey()) return;
+  const prev = S.cfg.theme;
+  S.cfg = { ...S.cfg, theme: k }; applyTheme(); renderLook();
+  try { await W(() => S.store.patchConfig({ theme: k })); toast('Tema ditukar: ' + THEMES[k].name); }
+  catch (e) { S.cfg = { ...S.cfg, theme: prev }; applyTheme(); renderLook(); toast(writeErrMsg(e), true); }
+}
+const DEF = { name: 'Kedai Anda', address: '', phone: '', sstNo: '', sst: 0, svc: 0, round5: true, paper: '58', footer: 'Terima kasih. Sila datang lagi!', cats: [] };
+const VIEWS = ['jualan', 'pesanan', 'laporan', 'menu', 'tetapan'];
+const RANGES = [['today', 'Hari ini'], ['yest', 'Semalam'], ['7d', '7 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lepas']];
+
+const newCart = () => ({ type: 'shop', app: '', ref: '', lines: [], disc: { type: 'pct', v: '' }, discOpen: false, del: '', delOpen: false, openId: null, t0: null });
+
+const S = {
+  mode: 'loading', canWrite: false, canAdmin: false, store: null, downloads: null,
+  cfg: { ...DEF }, menu: [], menuLoaded: false, synced: false, slow: false, connErr: null,
+  today: dkey(), day: null, dayLoaded: false, todayUnsub: null, open: [],
+  cart: newCart(), view: 'jualan', cat: 'Semua', q: '',
+  ordDate: dkey(), ordDay: null, ordLoading: false, ordUnsub: null,
+  rep: { range: 'today', from: dkey(), to: dkey(), days: null, loading: false, err: null, token: 0 },
+  setDirty: false, menuBusy: false,
+  conn: null, lastSync: 0, connErrMsg: '',
+};
+
+/* ---------- storage adapters ---------- */
+/* Google Sheets is the database: the Apps Script web app in apps-script/Code.gs reads and writes the sheet. */
+const CONN_KEY = 'kaunter-sambungan-v1';
+function loadConn() {
+  try { const c = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); if (c && c.url && c.pin) return c; } catch (e) {}
+  return null;
+}
+function saveConn(c) { try { if (c) localStorage.setItem(CONN_KEY, JSON.stringify(c)); else localStorage.removeItem(CONN_KEY); } catch (e) {} }
+async function apiCall(conn, action, body, timeoutMs) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), timeoutMs || 45000);
+  let res;
+  try {
+    // text/plain keeps this a "simple" request, which Apps Script accepts from another site without a preflight.
+    res = await fetch(conn.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...(body || {}), pin: conn.pin, action }), redirect: 'follow', signal: ctl.signal });
+  } catch (e) { throw { code: 'network', message: String((e && e.message) || e) }; }
+  finally { clearTimeout(timer); }
+  if (!res.ok) throw { code: 'http', message: 'HTTP ' + res.status };
+  let j;
+  try { j = await res.json(); } catch (e) { throw { code: 'bad_reply', message: 'Jawapan bukan JSON' }; }
+  if (j && j.error) throw { code: j.error, message: j.message || '' };
+  return j;
+}
+function sheetsAdapter(conn) {
+  const st = { rev: null, date: null, today: null, config: null, menu: null, open: null };
+  const subs = { config: new Set(), menu: new Set(), open: new Set(), day: new Set() };
+  const call = (a, b, t) => apiCall(conn, a, b, t);
+  const emitDay = (date, doc) => subs.day.forEach(x => { if (x.date === date) x.cb(doc); });
+  const setConfig = c => { st.config = c || {}; subs.config.forEach(f => f(st.config)); };
+  const setMenu = m => { st.menu = m || []; subs.menu.forEach(f => f(st.menu, { fromCache: false })); };
+  const setOpen = o => { st.open = o || []; subs.open.forEach(f => f(st.open)); };
+  let running = null, pending = false;
+  async function sync(force) {
+    if (running) { pending = true; return running; }
+    running = (async () => {
+      try {
+        const date = dkey();
+        if (date !== st.date) { st.date = date; st.rev = null; }
+        const j = await call('sync', { rev: force ? null : st.rev, date }, 30000);
+        if (!j.same) {
+          st.rev = j.rev;
+          if (j.sheetUrl) api.sheetUrl = j.sheetUrl;
+          setConfig(j.config); setMenu(j.menu); setOpen(j.open);
+          st.today = j.today || null; emitDay(st.date, st.today);
+        }
+        if (api.onSync) api.onSync(null);
+      } catch (e) { if (api.onSync) api.onSync(e); }
+    })();
+    try { await running; } finally { running = null; }
+    if (pending) { pending = false; return sync(); }
+  }
+  // A write response carries the new revision. Adopt it only when nothing else changed in between; otherwise re-read.
+  function afterWrite(j) {
+    if (st.rev !== null && j.rev === st.rev + 1) st.rev = j.rev;
+    else { st.rev = null; setTimeout(() => sync(), 50); }
+  }
+  const api = {
+    sheetUrl: null, onSync: null, sync,
+    start() {
+      sync(true);
+      setInterval(() => { if (document.visibilityState === 'visible') sync(); }, 30000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+    },
+    onConfig(cb) { subs.config.add(cb); if (st.config) queueMicrotask(() => cb(st.config)); return () => subs.config.delete(cb); },
+    onMenu(cb) { subs.menu.add(cb); if (st.menu) queueMicrotask(() => cb(st.menu, { fromCache: false })); return () => subs.menu.delete(cb); },
+    onOpen(cb) { subs.open.add(cb); if (st.open) queueMicrotask(() => cb(st.open)); return () => subs.open.delete(cb); },
+    onDay(date, cb) {
+      const x = { date, cb }; subs.day.add(x);
+      if (date === st.date && st.rev !== null) queueMicrotask(() => cb(st.today));
+      else if (date !== dkey()) call('orders', { from: date, to: date }, 45000)
+        .then(j => { if (subs.day.has(x)) cb((j.days || {})[date] || null); })
+        .catch(e => { if (subs.day.has(x)) cb(null); if (api.onSync) api.onSync(e); });
+      return () => subs.day.delete(x);
+    },
+    async saveConfig(cfg) { const j = await call('saveConfig', { config: cfg }); setConfig(j.config); afterWrite(j); },
+    patchConfig(o) { return api.saveConfig(o); },
+    async saveItem(it) { const j = await call('saveItem', { item: it }); setMenu(j.menu); afterWrite(j); },
+    async saveItems(list) { const j = await call('saveItems', { items: list }); setMenu(j.menu); afterWrite(j); },
+    async deleteItem(id) { const j = await call('deleteItem', { id }); setMenu(j.menu); afterWrite(j); },
+    async addOrder(date, o) {
+      let j;
+      // The script ignores a repeated order id, so one retry after a dropped connection cannot record the sale twice.
+      try { j = await call('addOrder', { date, order: o }, 45000); }
+      catch (e) { if (e.code !== 'network') throw e; await new Promise(r => setTimeout(r, 1500)); j = await call('addOrder', { date, order: o }, 45000); }
+      const saved = j.order || o;
+      if (date === st.date) {
+        st.today = { date, orders: { ...((st.today && st.today.orders) || {}), [saved.id]: saved } };
+        emitDay(date, st.today);
+      }
+      afterWrite(j);
+      return saved;
+    },
+    async patchOrder(date, id, patch) {
+      if (!patch || patch.status !== 'void') return;
+      const j = await call('voidOrder', { id, date });
+      if (date === st.date) { st.today = { date, orders: { ...((st.today && st.today.orders) || {}), [id]: j.order } }; emitDay(date, st.today); }
+      else { const r = await call('orders', { from: date, to: date }); emitDay(date, (r.days || {})[date] || null); }
+      afterWrite(j);
+    },
+    async getRange(from, to) { const j = await call('orders', { from, to }, 60000); return j.days || {}; },
+    async saveOpen(t) { const j = await call('saveOpen', { ticket: t, label: ticketLabel(t) }); setOpen(j.open); afterWrite(j); },
+    async deleteOpen(id) { const j = await call('deleteOpen', { id }); setOpen(j.open); afterWrite(j); },
+  };
+  return api;
+}
+
+async function W(fn) {
+  try { return await fn(); }
+  catch (e) {
+    if (e && e.code === 'unavailable') { await new Promise(r => setTimeout(r, 400 + Math.random() * 800)); return await fn(); }
+    throw e;
+  }
+}
+function writeErrMsg(e) {
+  const c = e && e.code;
+  if (c === 'network') return 'Tiada sambungan internet, atau Google tidak menjawab. Cuba lagi.';
+  if (c === 'bad_pin') return 'PIN salah. Masukkan PIN yang sama seperti dalam skrip Google Sheets.';
+  if (c === 'pin_not_set') return 'PIN belum ditukar dalam skrip Google Sheets. Tukar PIN, tekan Save, kemudian Deploy versi baharu.';
+  if (c === 'no_sheet') return (e.message || 'Satu tab dalam Google Sheet hilang.') + ' Jangan tukar nama tab.';
+  if (c === 'not_found') return 'Pesanan ini tiada dalam Google Sheet.';
+  if (c === 'http' || c === 'bad_reply') return 'Skrip Google Sheets tidak menjawab dengan betul. Semak URL skrip, dan pastikan ia di-deploy sebagai Web app untuk “Anyone”.';
+  return 'Tidak dapat simpan' + (e && e.message ? ': ' + e.message : '') + '.';
+}
+function onErr(e) {
+  const c = e && e.code;
+  if (c === 'revoked' || c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed') { S.mode = 'nodb'; S.canWrite = false; }
+  S.connErr = c || 'unavailable';
+  renderAll();
+}
+
+/* ---------- money ---------- */
+const modsSen = l => l.mods.reduce((a, m) => a + m.ps, 0);
+const lineSen = l => (l.ps + modsSen(l)) * l.q;
+function calc(cart, cfg, method) {
+  const lines = cart.lines || [];
+  const sub = lines.reduce((a, l) => a + lineSen(l), 0);
+  const dv = parseFloat(String(cart.disc && cart.disc.v || '').replace(',', '.')) || 0;
+  let disc = 0;
+  if (dv > 0) disc = cart.disc.type === 'pct' ? Math.round(sub * Math.min(dv, 100) / 100) : Math.min(Math.round(dv * 100), sub);
+  const net = sub - disc;
+  const svc = Math.round(net * (Number(cfg.svc) || 0) / 100);
+  const sst = Math.round((net + svc) * (Number(cfg.sst) || 0) / 100);
+  const del = Math.max(0, Math.round((parseFloat(String(cart.del || '').replace(',', '.')) || 0) * 100));
+  const gross = net + svc + sst + del;
+  const rnd = method === 'cash' && cfg.round5 ? Math.round(gross / 5) * 5 - gross : 0;
+  return { sub, disc, dv, net, svc, sst, del, gross, rnd, total: gross + rnd, count: lines.reduce((a, l) => a + l.q, 0) };
+}
+
+/* ---------- menu helpers ---------- */
+const catOf = i => (i.cat || '').trim() || 'Lain-lain';
+function cats() {
+  // Order from settings; names match without regard to case or extra spaces. Unlisted categories follow alphabetically.
+  const order = (Array.isArray(S.cfg.cats) ? S.cfg.cats : []).map(c => String(c).trim().toLowerCase());
+  const rank = c => { const k = order.indexOf(c.toLowerCase()); return k < 0 ? 1e9 : k; };
+  return [...new Set(S.menu.map(catOf))].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+const sortVal = i => (typeof i.sort === 'number' ? i.sort : 1e9);
+function sortedMenu() {
+  const cs = cats();
+  return [...S.menu].sort((a, b) => cs.indexOf(catOf(a)) - cs.indexOf(catOf(b)) || sortVal(a) - sortVal(b) || String(a.name).localeCompare(String(b.name)));
+}
+function parseMods(t) {
+  const seen = new Set();
+  return t.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const m = l.match(/^(.*?)\s*[,=|+]\s*(?:RM\s*)?(\d+(?:\.\d{1,2})?)\s*$/i);
+    return m ? { n: m[1].trim().slice(0, 40), p: r2(toSen(m[2])) } : { n: l.slice(0, 40), p: 0 };
+  }).filter(m => m.n && !seen.has(m.n) && seen.add(m.n)).slice(0, 20);
+}
+const modsText = mods => (mods || []).map(m => toSen(m.p) ? `${m.n}, ${fmt(toSen(m.p))}` : m.n).join('\n');
+const nextNo = () => (S.day && S.day.orders ? Object.values(S.day.orders) : []).reduce((m, o) => Math.max(m, o.no || 0), 0) + 1;
+const ticketLabel = t => typeName(t) + (t.ref ? ' · ' + t.ref : '');
+
+/* ---------- UI utilities ---------- */
+let toastTimer = null;
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = 'toast'; }, isErr ? 4500 : 2600);
+}
+function armConfirm(btn, label, fn) {
+  if (btn.dataset.armed) { delete btn.dataset.armed; clearTimeout(btn._t); btn.textContent = btn._orig; fn(); return; }
+  btn._orig = btn.textContent; btn.dataset.armed = '1'; btn.textContent = label;
+  btn._t = setTimeout(() => { if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = btn._orig; } }, 3500);
+}
+function emptyState(title, text, action) {
+  return h('div', { class: 'empty' }, h('h3', { text: title }), text ? h('p', { text }) : null, action || null);
+}
+let lastFocus = null;
+function modal(build) {
+  const ov = $('#overlay');
+  if (ov.hidden) lastFocus = document.activeElement;
+  const box = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' });
+  build(box, () => closeModal());
+  ov.replaceChildren(box); ov.hidden = false;
+  ov.onclick = e => { if (e.target === ov && !box.dataset.busy) closeModal(); };
+  const f = box.querySelector('[autofocus]') || box.querySelector('.modal-actions .primary, .modal-actions button, button');
+  setTimeout(() => f && f.focus(), 20);
+  return box;
+}
+function closeModal() {
+  const ov = $('#overlay'); if (ov.hidden) return;
+  ov.hidden = true; ov.replaceChildren();
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+}
+function mhead(title, sub) {
+  return h('div', { class: 'modal-head' },
+    h('div', {}, h('h2', { id: 'modal-title', text: title }), sub ? h('div', { class: 'sub', text: sub }) : null),
+    h('button', { type: 'button', class: 'x', 'aria-label': 'Tutup', onclick: () => closeModal() }, '×'));
+}
+function guardWrite() {
+  if (S.mode === 'loading') { toast('Masih menyambung ke data kaunter. Tunggu sebentar.'); return false; }
+  if (S.mode === 'nodb' || !S.canWrite) { toast('Kaunter belum disambung ke Google Sheet. Pergi ke Tetapan, Sambungan Google Sheets.', true); return false; }
+  return true;
+}
+const canDownload = () => true;
+async function saveFile(name, data) {
+  const url = URL.createObjectURL(new Blob([data], { type: name.endsWith('.csv') ? 'text/csv' : 'text/plain' }));
+  const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+async function copyText(text, el) {
+  try { await navigator.clipboard.writeText(text); toast('Teks resit disalin'); }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    toast('Teks sudah dipilih. Tekan Salin pada peranti anda.');
+  }
+}
+
+/* ---------- draft (per-browser convenience) ---------- */
+const DRAFT = 'kaunter-pos-draft-v1';
+function saveDraft() { try { localStorage.setItem(DRAFT, JSON.stringify(S.cart)); } catch (e) {} }
+function loadDraft() {
+  try { const c = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if (c && Array.isArray(c.lines)) return { ...newCart(), ...c }; } catch (e) {}
+  return null;
+}
+
+/* ---------- rendering ---------- */
+function renderAll() {
+  renderStatus();
+  renderConn();
+  $('#brand-name').textContent = S.cfg.name || DEF.name;
+  renderView();
+  renderTicket();
+}
+function renderStatus() {
+  let cls = 'wait', txt = 'Menyambung…';
+  if (S.mode === 'nodb') { cls = 'bad'; txt = 'Belum disambung'; }
+  else if (S.mode === 'db') {
+    if (S.connErr) { cls = 'bad'; txt = S.connErr === 'network' ? 'Luar talian' : S.connErr === 'bad_pin' ? 'PIN salah' : 'Ralat sambungan'; }
+    else if (S.synced) { cls = 'ok'; txt = 'Disegerakkan ' + fmtTime(S.lastSync); }
+    else if (S.slow) { cls = 'wait'; txt = 'Google lambat menjawab'; }
+  }
+  $('#status').className = 'status ' + cls; $('#status-txt').textContent = txt;
+}
+function renderView() {
+  if (S.view === 'jualan') renderPOS();
+  else if (S.view === 'pesanan') renderOrders();
+  else if (S.view === 'laporan') renderReport();
+  else if (S.view === 'menu') renderMenuAdmin();
+  else if (S.view === 'tetapan') renderSettings();
+}
+function route() {
+  if (location.hash.startsWith('#sambung=')) { readSetupHash(); location.reload(); return; }
+  const v = location.hash.slice(1);
+  S.view = VIEWS.includes(v) ? v : 'jualan';
+  VIEWS.forEach(n => {
+    $('#view-' + n).hidden = n !== S.view;
+    const tab = $('#tab-' + n);
+    if (n === S.view) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current');
+  });
+  if (S.view === 'laporan') loadReport();
+  else renderView();
+}
+
+/* POS */
+function renderPOS(pulseId) {
+  const n = $('#pos-notice');
+  if (S.mode === 'nodb') { n.hidden = false; n.textContent = 'Kaunter belum disambung ke Google Sheet. Pergi ke Tetapan, Sambungan Google Sheets, dan masukkan URL skrip serta PIN.'; }
+  else if (S.mode === 'db' && S.connErr) { n.hidden = false; n.textContent = writeErrMsg({ code: S.connErr, message: S.connErrMsg }) + (S.connErr === 'network' ? ' Jualan tidak dapat disimpan sehingga sambungan pulih.' : ''); }
+  else n.hidden = true;
+
+  const cs = ['Semua', ...cats()];
+  if (!cs.includes(S.cat)) S.cat = 'Semua';
+  $('#cat-chips').replaceChildren(...(S.menu.length ? cs : []).map(c => h('button', {
+    class: 'chip', type: 'button', 'aria-pressed': c === S.cat ? 'true' : 'false',
+    onclick: () => { S.cat = c; renderPOS(); },
+  }, c)));
+
+  const g = $('#tiles');
+  if (S.mode === 'loading' || (S.mode === 'db' && !S.menuLoaded)) {
+    g.replaceChildren(...Array.from({ length: 8 }, () => h('div', { class: 'skel', 'aria-hidden': 'true' })));
+    return;
+  }
+  if (!S.menu.length) {
+    g.replaceChildren(emptyState('Menu masih kosong',
+      'Tambah item dan harga di bahagian Menu. Item akan muncul di sini sebagai butang untuk dijual.',
+      S.mode !== 'nodb' ? h('a', { class: 'btn primary', href: '#menu' }, 'Buka Menu') : null));
+    return;
+  }
+  const q = S.q.trim().toLowerCase();
+  const items = sortedMenu().filter(i => (S.cat === 'Semua' || catOf(i) === S.cat) && (!q || String(i.name).toLowerCase().includes(q)));
+  if (!items.length) { g.replaceChildren(h('p', { class: 'muted', style: 'grid-column:1/-1', text: `Tiada item sepadan dengan “${S.q}”.` })); return; }
+  const qty = {}; S.cart.lines.forEach(l => { qty[l.id] = (qty[l.id] || 0) + l.q; });
+  const focusedId = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.id : null;
+  const out = []; let lastCat = null;
+  items.forEach(i => {
+    if (S.cat === 'Semua' && !q && catOf(i) !== lastCat) { lastCat = catOf(i); out.push(h('div', { class: 'g-head', text: lastCat })); }
+    const off = i.avail === false, n = qty[i.id];
+    out.push(h('button', {
+      class: 'tile' + (n ? ' in' : '') + (pulseId === i.id ? ' pulse' : ''), type: 'button', disabled: off, 'data-id': i.id,
+      'aria-label': `${i.name}, RM ${fmt(toSen(i.price))}${off ? ', habis' : ''}${n ? `, ${n} dalam pesanan` : ''}`,
+      onclick: () => tapItem(i),
+    },
+      h('span', { class: 't-name', text: i.name }),
+      h('span', { class: 't-foot' },
+        h('span', { class: 't-price', text: fmt(toSen(i.price)) }),
+        i.mods && i.mods.length ? h('span', { class: 't-opt', text: 'pilihan' }) : null,
+        off ? h('span', { class: 't-off', text: 'Habis' }) : null),
+      n ? h('span', { class: 't-badge', text: n }) : null));
+  });
+  g.replaceChildren(...out);
+  if (focusedId) { const t = g.querySelector(`[data-id="${CSS.escape(focusedId)}"]`); if (t) t.focus(); }
+}
+
+function tapItem(i) {
+  if (i.mods && i.mods.length) openItemSheet(i);
+  else addLine(i, [], '', 1, true);
+}
+function addLine(item, mods, note, q, pulse) {
+  const key = item.id + '|' + mods.map(m => m.n).sort().join(',') + '|' + (note || '');
+  const ex = S.cart.lines.find(l => l.key === key);
+  if (ex) ex.q += q;
+  else S.cart.lines.push({ key, id: item.id, n: item.name, ps: toSen(item.price), mods: mods.map(m => ({ n: m.n, ps: toSen(m.p) })), note: note || '', q });
+  cartChanged(pulse ? item.id : null);
+}
+function removeLine(l, silent) {
+  S.cart.lines = S.cart.lines.filter(x => x !== l);
+  if (!silent) cartChanged();
+}
+function editLine(l) {
+  const item = S.menu.find(i => i.id === l.id) || { id: l.id, name: l.n, price: l.ps / 100, mods: l.mods.map(m => ({ n: m.n, p: m.ps / 100 })) };
+  openItemSheet(item, l);
+}
+function cartChanged(pulseId) {
+  if (!S.cart.lines.length && !S.cart.openId) S.cart.t0 = null; else if (!S.cart.t0) S.cart.t0 = Date.now();
+  saveDraft(); renderTicket();
+  if (S.view === 'jualan') renderPOS(pulseId);
+}
+
+function renderTicket() {
+  const C = S.cart, c = calc(C, S.cfg, null);
+  $('#tk-eyebrow').textContent = C.openId ? 'Pesanan disimpan' : 'Pesanan baru';
+  $('#tk-title').textContent = C.openId ? ticketLabel(C) : noStr(nextNo());
+  const hc = $('#held-count'); hc.textContent = S.open.length; hc.className = 'count' + (S.open.length ? '' : ' zero');
+  ORDER_TYPES.forEach(k => $('#type-' + k).setAttribute('aria-pressed', C.type === k ? 'true' : 'false'));
+  $('#app-row').hidden = C.type !== 'app';
+  document.querySelectorAll('#app-row [data-app]').forEach(b => b.setAttribute('aria-pressed', C.app === b.dataset.app ? 'true' : 'false'));
+  $('#ref-label').textContent = C.type === 'app' ? 'No. order' : 'Nama';
+  const ref = $('#t-ref'); if (document.activeElement !== ref) ref.value = C.ref;
+
+  const lines = $('#tk-lines');
+  if (!C.lines.length) {
+    lines.replaceChildren(h('div', { class: 'tk-empty' },
+      h('p', { text: 'Belum ada item.' }),
+      h('p', { class: 'muted small', text: 'Ketik item di menu untuk mula. Item bertanda “pilihan” akan buka tetingkap untuk ais, pedas, tambah telur dan lain-lain.' })));
+  } else {
+    lines.replaceChildren(...C.lines.map(l => {
+      const sub = [...l.mods.map(m => m.n), l.note ? `“${l.note}”` : null].filter(Boolean).join(' · ');
+      return h('div', { class: 'line' },
+        h('div', { class: 'qty' },
+          h('button', { type: 'button', class: l.q === 1 ? 'rm' : '', 'aria-label': l.q === 1 ? `Buang ${l.n}` : `Kurangkan ${l.n}`,
+            onclick: () => { if (l.q === 1) removeLine(l); else { l.q--; cartChanged(); } } }, l.q === 1 ? '×' : '−'),
+          h('span', { text: l.q }),
+          h('button', { type: 'button', 'aria-label': `Tambah ${l.n}`, onclick: () => { l.q++; cartChanged(); } }, '+')),
+        h('button', { type: 'button', class: 'line-main', onclick: () => editLine(l), 'aria-label': `Ubah ${l.n}` },
+          h('span', { class: 'ln-name', text: l.n }),
+          h('span', { class: 'ln-sub', text: sub || '@ ' + fmt(l.ps + modsSen(l)) })),
+        h('span', { class: 'ln-amt', text: fmt(lineSen(l)) }));
+    }));
+  }
+
+  const showDisc = C.discOpen || c.dv > 0;
+  const showDel = C.delOpen || c.del > 0;
+  $('#disc-toggle').hidden = showDisc || !C.lines.length;
+  $('#disc-ctl').hidden = !showDisc;
+  $('#del-toggle').hidden = showDel || !C.lines.length;
+  $('#del-ctl').hidden = !showDel;
+  $('#tk-links').hidden = $('#disc-toggle').hidden && $('#del-toggle').hidden;
+  const dl = $('#t-del'); if (document.activeElement !== dl) dl.value = C.del || '';
+  $('#disc-pct').setAttribute('aria-pressed', C.disc.type === 'pct' ? 'true' : 'false');
+  $('#disc-amt').setAttribute('aria-pressed', C.disc.type === 'amt' ? 'true' : 'false');
+  const di = $('#t-disc'); if (document.activeElement !== di) di.value = C.disc.v;
+
+  const rows = [['Jumlah kecil', fmt(c.sub)]];
+  if (c.disc) rows.push([C.disc.type === 'pct' ? `Diskaun ${Math.min(c.dv, 100)}%` : 'Diskaun', '-' + fmt(c.disc)]);
+  if (Number(S.cfg.svc) > 0) rows.push([`Caj perkhidmatan ${S.cfg.svc}%`, fmt(c.svc)]);
+  if (Number(S.cfg.sst) > 0) rows.push([`SST ${S.cfg.sst}%`, fmt(c.sst)]);
+  if (c.del) rows.push(['Caj delivery', fmt(c.del)]);
+  $('#tk-sums').replaceChildren(
+    ...rows.flatMap(([a, b]) => [h('dt', { text: a }), h('dd', { text: b })]),
+    h('dt', { class: 'grand', text: 'Jumlah' }), h('dd', { class: 'grand', text: RM(c.gross) }));
+
+  const blocked = S.mode === 'loading' || S.mode === 'nodb' || !S.canWrite;
+  const needApp = C.type === 'app' && !C.app;
+  $('#btn-pay').disabled = !c.count || blocked || needApp;
+  $('#pay-lbl').textContent = needApp && c.count ? 'Pilih platform dulu' : 'Bayar';
+  $('#pay-amt').textContent = RM(c.gross);
+  $('#btn-hold').disabled = !c.count || blocked;
+  $('#btn-hold').textContent = C.openId ? 'Kemas kini' : 'Simpan dulu';
+  const clr = $('#btn-clear');
+  if (!clr.dataset.armed) clr.textContent = C.openId ? 'Tutup' : 'Kosongkan';
+  clr.disabled = !c.count && !C.openId && !C.ref;
+  $('#cb-count').textContent = c.count ? `${c.count} item · lihat pesanan` : 'Pesanan kosong';
+  $('#cb-total').textContent = RM(c.gross);
+}
+const openTicketPhone = () => $('#ticket').classList.add('open');
+const closeTicketPhone = () => $('#ticket').classList.remove('open');
+
+/* Item options sheet */
+function openItemSheet(item, line) {
+  const base = toSen(item.price);
+  const mods = item.mods || [];
+  let q = line ? line.q : 1;
+  const sel = new Set(line ? line.mods.map(m => m.n) : []);
+  modal((box, close) => {
+    const total = h('span');
+    const qv = h('span', { class: 'qv', text: q });
+    const upd = () => {
+      const ms = mods.filter(m => sel.has(m.n)).reduce((a, m) => a + toSen(m.p), 0);
+      qv.textContent = q; total.textContent = RM((base + ms) * q);
+    };
+    const note = h('input', { id: 'f-note', value: line ? line.note : '', placeholder: 'cth. tak pedas, kuah asing', maxlength: '80', autocomplete: 'off' });
+    const submit = () => {
+      const chosen = mods.filter(m => sel.has(m.n));
+      if (line) removeLine(line, true);
+      addLine(item, chosen, note.value.trim(), q, !line);
+      close();
+    };
+    note.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    box.append(
+      mhead(item.name, RM(base)),
+      mods.length ? h('div', { class: 'field' }, h('span', { class: 'lbl', text: 'Pilihan' }),
+        h('div', { class: 'opts' }, mods.map(m => {
+          const b = h('button', { class: 'opt', type: 'button', 'aria-pressed': sel.has(m.n) ? 'true' : 'false',
+            onclick: () => { if (sel.has(m.n)) sel.delete(m.n); else sel.add(m.n); b.setAttribute('aria-pressed', sel.has(m.n) ? 'true' : 'false'); upd(); } },
+            h('span', { text: m.n }), toSen(m.p) ? h('span', { class: 'mono', text: '+' + fmt(toSen(m.p)) }) : null);
+          return b;
+        }))) : null,
+      h('label', { class: 'field' }, h('span', { class: 'lbl', text: 'Nota untuk dapur' }), note),
+      h('div', { class: 'qty-row' }, h('span', { class: 'lbl', text: 'Kuantiti' }),
+        h('div', { class: 'stepper' },
+          h('button', { type: 'button', 'aria-label': 'Kurangkan', onclick: () => { if (q > 1) { q--; upd(); } } }, '−'),
+          qv,
+          h('button', { type: 'button', 'aria-label': 'Tambah', onclick: () => { q++; upd(); } }, '+'))),
+      h('div', { class: 'modal-actions' },
+        line ? h('button', { class: 'btn danger', type: 'button', onclick: () => { removeLine(line); close(); } }, 'Buang') : null,
+        h('button', { class: 'btn primary grow', type: 'button', onclick: submit }, line ? 'Kemas kini · ' : 'Tambah · ', total)));
+    upd();
+  });
+}
+
+/* Held tickets */
+async function holdTicket() {
+  const C = S.cart;
+  if (!C.lines.length || !guardWrite()) return;
+  const btn = $('#btn-hold'); btn.disabled = true;
+  const t = { id: C.openId || uid(), type: C.type, app: C.type === 'app' ? C.app || '' : '', ref: C.ref.trim().slice(0, 40), lines: clone(C.lines), disc: clone(C.disc), del: C.del || '', t: C.t0 || Date.now(), upd: Date.now() };
+  try {
+    await W(() => S.store.saveOpen(t));
+    toast('Disimpan: ' + ticketLabel(t));
+    S.cart = newCart(); cartChanged(); closeTicketPhone();
+  } catch (e) { toast(writeErrMsg(e), true); renderTicket(); }
+}
+function resumeTicket(t) {
+  S.cart = { ...newCart(), type: ORDER_TYPES.includes(t.type) ? t.type : 'shop', app: t.app || '', ref: t.ref || '', lines: clone(t.lines || []), disc: clone(t.disc || { type: 'pct', v: '' }), del: t.del || '', openId: t.id, t0: t.t || Date.now() };
+  cartChanged(); openTicketPhone();
+}
+function openHeld() {
+  modal((box, close) => {
+    box.append(mhead('Pesanan tertangguh', S.open.length ? `${S.open.length} belum bayar` : null));
+    if (!S.open.length) {
+      box.append(emptyState('Tiada pesanan tertangguh', 'Tekan “Simpan dulu” untuk tangguh bayaran, contohnya pelanggan makan dahulu dan bayar kemudian.'));
+      return;
+    }
+    const list = h('div', { class: 'held-list' });
+    S.open.forEach(t => {
+      const c = calc(t, S.cfg, null);
+      const row = h('div', { class: 'held' });
+      const resume = h('button', { class: 'btn primary sm', type: 'button', onclick: e => {
+        const go = () => { resumeTicket(t); close(); };
+        if (S.cart.lines.length && S.cart.openId !== t.id) armConfirm(e.currentTarget, 'Ganti troli?', go); else go();
+      } }, S.cart.openId === t.id ? 'Sedang dibuka' : 'Buka');
+      const del = h('button', { class: 'btn sm', type: 'button', disabled: !S.canWrite, onclick: e => armConfirm(e.currentTarget, 'Sahkan buang', async () => {
+        try {
+          await W(() => S.store.deleteOpen(t.id)); row.remove();
+          if (S.cart.openId === t.id) { S.cart.openId = null; cartChanged(); }
+          toast('Pesanan tertangguh dibuang');
+        } catch (err) { toast(writeErrMsg(err), true); }
+      }) }, 'Buang');
+      row.append(
+        h('strong', { text: ticketLabel(t) }),
+        h('div', { class: 'acts' }, del, resume),
+        h('span', { class: 'meta', text: `Sejak ${fmtTime(t.t)} · ${c.count} item · ${RM(c.gross)}` }));
+      list.append(row);
+    });
+    box.append(list);
+  });
+}
+
+/* Payment */
+function quickAmounts(total) {
+  const set = new Set([total]);
+  [Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, Math.ceil(total / 1000) * 1000, 2000, 5000, 10000].forEach(c => { if (c > total) set.add(c); });
+  return [...set].sort((a, b) => a - b).slice(0, 5);
+}
+function openPay() {
+  if (!S.cart.lines.length || !guardWrite()) return;
+  if (S.cart.type === 'app' && !S.cart.app) { toast('Pilih platform: Grab, Shopee atau Foodpanda.', true); return; }
+  const keys = S.cart.type === 'app' ? ['app', 'cash', 'card', 'qr', 'ewallet'] : ['cash', 'card', 'qr', 'ewallet'];
+  let method = keys[0], busy = false;
+  modal((box, close) => {
+    const amt = h('div', { class: 'pay-total' });
+    const amtNote = h('div', { class: 'muted small' });
+    const methods = h('div', { class: 'methods', role: 'group', 'aria-label': 'Kaedah bayaran' },
+      keys.map(k => [k, PAY[k]]).map(([k, v]) => h('button', { type: 'button', 'data-m': k, onclick: () => { method = k; upd(); if (k === 'cash') tend.focus(); } }, v)));
+    const tend = h('input', { id: 'f-tend', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Kosong = wang tepat', autofocus: true, 'aria-label': 'Tunai diterima' });
+    const quick = h('div', { class: 'quick' });
+    const chg = h('div', { class: 'change' });
+    const cashBox = h('div', { class: 'cashbox' }, h('span', { class: 'lbl', text: 'Tunai diterima (RM)' }), tend, quick, chg);
+    const err = h('p', { class: 'err', role: 'alert' });
+    const confirm = h('button', { class: 'btn pay', type: 'button' });
+    const upd = () => {
+      const c = calc(S.cart, S.cfg, method);
+      amt.textContent = RM(c.total);
+      amtNote.textContent = c.rnd ? `Dibundarkan ${c.rnd > 0 ? '+' : ''}${fmt(c.rnd)} daripada ${RM(c.gross)}` : `${c.count} item · ${ticketLabel(S.cart)}`;
+      [...methods.children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === method ? 'true' : 'false'));
+      cashBox.hidden = method !== 'cash';
+      quick.replaceChildren(...quickAmounts(c.total).map(v => h('button', { type: 'button', class: 'btn sm', onclick: () => { tend.value = (v / 100).toFixed(2); upd(); } }, v === c.total ? 'Wang tepat' : RM(v))));
+      let ok = true;
+      const raw = tend.value.trim();
+      if (method === 'cash') {
+        const t = toSen(raw);
+        if (!raw) { chg.textContent = 'Wang tepat, tiada baki'; chg.className = 'change muted'; }
+        else if (!/^[\d.,\s]+$/.test(raw.replace(/^RM/i, ''))) { chg.textContent = 'Masukkan nombor sahaja, cth. 50 atau 20.50'; chg.className = 'change bad'; ok = false; }
+        else if (t < c.total) { chg.textContent = 'Kurang ' + RM(c.total - t); chg.className = 'change bad'; ok = false; }
+        else { chg.textContent = 'Baki ' + RM(t - c.total); chg.className = 'change good'; }
+      }
+      confirm.disabled = !ok || busy;
+      confirm.replaceChildren(h('span', { text: busy ? 'Menyimpan…' : 'Selesai bayaran' }), h('span', { text: RM(c.total) }));
+    };
+    tend.addEventListener('input', upd);
+    tend.addEventListener('keydown', e => { if (e.key === 'Enter' && !confirm.disabled) { e.preventDefault(); confirm.click(); } });
+    confirm.addEventListener('click', async () => {
+      if (busy) return;
+      busy = true; box.dataset.busy = '1'; err.textContent = ''; upd();
+      try {
+        const res = await completePayment(method, method === 'cash' ? toSen(tend.value) : 0);
+        delete box.dataset.busy; close();
+        showReceipt(res.o, res.date, true);
+      } catch (e) { busy = false; delete box.dataset.busy; err.textContent = writeErrMsg(e); upd(); }
+    });
+    box.append(mhead('Bayaran'), h('div', {}, amt, amtNote), methods, cashBox, err, confirm);
+    upd();
+  });
+}
+async function completePayment(method, tendSen) {
+  const C = S.cart, c = calc(C, S.cfg, method);
+  if (dkey() !== S.today) subToday();
+  const date = S.today;
+  const tend = method === 'cash' && tendSen > 0 ? tendSen : c.total;
+  const o = {
+    id: uid(), no: nextNo(), t: Date.now(), type: C.type, ...(C.type === 'app' ? { app: C.app } : {}), ref: C.ref.trim().slice(0, 40),
+    items: C.lines.map(l => {
+      const it = { n: l.n, q: l.q, p: r2(l.ps), m: l.mods.map(m => m.n), mp: r2(modsSen(l)) };
+      if (l.note) it.note = l.note;
+      return it;
+    }),
+    sub: r2(c.sub), disc: r2(c.disc), svc: r2(c.svc), sst: r2(c.sst), del: r2(c.del), rnd: r2(c.rnd), total: r2(c.total),
+    svcR: Number(S.cfg.svc) || 0, sstR: Number(S.cfg.sst) || 0,
+    pay: method, tend: r2(tend), chg: r2(tend - c.total), status: 'paid',
+  };
+  const saved = (await S.store.addOrder(date, o)) || o;
+  const openId = C.openId;
+  S.cart = newCart(); cartChanged(); closeTicketPhone();
+  if (openId) W(() => S.store.deleteOpen(openId)).catch(() => {});
+  return { o: saved, date };
+}
+
+/* Receipt */
+function wrapText(s, w) {
+  const out = []; let cur = '';
+  for (const wd of String(s).split(/\s+/).filter(Boolean)) {
+    if (!cur) cur = wd; else if ((cur + ' ' + wd).length <= w) cur += ' ' + wd; else { out.push(cur); cur = wd; }
+    while (cur.length > w) { out.push(cur.slice(0, w)); cur = cur.slice(w); }
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
+function receiptText(o, date) {
+  const cfg = S.cfg, W_ = cfg.paper === '80' ? 42 : 32, L = [];
+  const center = s => { s = s.slice(0, W_); return ' '.repeat(Math.max(0, Math.floor((W_ - s.length) / 2))) + s; };
+  const lr = (l, r) => { const room = W_ - r.length - 1; if (l.length > room) l = l.slice(0, room); return l + ' '.repeat(Math.max(1, W_ - l.length - r.length)) + r; };
+  const rule = '-'.repeat(W_);
+  wrapText((cfg.name || DEF.name).toUpperCase(), W_).forEach(x => L.push(center(x)));
+  String(cfg.address || '').split('\n').forEach(line => { if (line.trim()) wrapText(line, W_).forEach(x => L.push(center(x))); });
+  if (cfg.phone) L.push(center('Tel: ' + cfg.phone));
+  if (cfg.sstNo) L.push(center('No. SST: ' + cfg.sstNo));
+  L.push(rule);
+  L.push(lr('No. ' + noStr(o.no), fmtDate(date) + ' ' + fmtTime(o.t)));
+  L.push(typeName(o) + (o.ref ? (o.type === 'app' ? ', order ' : ', ') + o.ref : ''));
+  if (o.status === 'void') L.push(center('*** DIBATALKAN ***'));
+  L.push(rule);
+  for (const it of o.items || []) {
+    const unit = toSen(it.p) + toSen(it.mp);
+    const amt = fmt(unit * it.q);
+    const pre = `${it.q} x `, ind = ' '.repeat(pre.length);
+    const nameLines = wrapText(it.n, W_ - amt.length - 1 - pre.length);
+    L.push(lr(pre + nameLines[0], amt));
+    nameLines.slice(1).forEach(x => L.push(ind + x));
+    (it.m || []).forEach(m => wrapText('+ ' + m, W_ - pre.length).forEach(x => L.push(ind + x)));
+    if (it.note) wrapText('Nota: ' + it.note, W_ - pre.length).forEach(x => L.push(ind + x));
+    if (it.q > 1) L.push(ind + '@ ' + fmt(unit));
+  }
+  L.push(rule);
+  L.push(lr('Jumlah kecil', fmt(toSen(o.sub))));
+  if (toSen(o.disc)) L.push(lr('Diskaun', '-' + fmt(toSen(o.disc))));
+  if (toSen(o.svc)) L.push(lr(`Caj perkhidmatan ${o.svcR}%`, fmt(toSen(o.svc))));
+  if (toSen(o.sst)) L.push(lr(`SST ${o.sstR}%`, fmt(toSen(o.sst))));
+  if (toSen(o.del)) L.push(lr('Caj delivery', fmt(toSen(o.del))));
+  if (toSen(o.rnd)) L.push(lr('Pembundaran', (toSen(o.rnd) > 0 ? '+' : '') + fmt(toSen(o.rnd))));
+  L.push(lr('JUMLAH', 'RM ' + fmt(toSen(o.total))));
+  L.push(lr(PAY[o.pay] || o.pay, fmt(toSen(o.tend))));
+  if (o.pay === 'cash') L.push(lr('Baki', fmt(toSen(o.chg))));
+  L.push(rule);
+  String(cfg.footer || '').split('\n').forEach(line => { if (line.trim()) wrapText(line, W_).forEach(x => L.push(center(x))); });
+  return L.join('\n');
+}
+function showReceipt(o, date, fresh) {
+  modal((box, close) => {
+    box.style.width = 'min(460px, 100%)';
+    const text = receiptText(o, date);
+    const pre = h('pre', { class: 'receipt', text });
+    const acts = h('div', { class: 'modal-actions' });
+    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => copyText(text, pre) }, 'Salin teks'));
+    if (canDownload()) acts.append(h('button', { class: 'btn', type: 'button', onclick: () => saveFile(`resit-${date}-${noStr(o.no).slice(1)}.txt`, text) }, 'Simpan .txt'));
+    acts.append(h('button', { class: 'btn', type: 'button', onclick: () => printReceipt(text) }, 'Cetak'));
+    if (o.status !== 'void' && S.canWrite && S.mode !== 'nodb') {
+      acts.append(h('button', { class: 'btn danger', type: 'button', onclick: e => armConfirm(e.currentTarget, 'Ketik lagi untuk batal', async () => {
+        try {
+          await W(() => S.store.patchOrder(date, o.id, { status: 'void', voidAt: Date.now() }));
+          toast(`Pesanan ${noStr(o.no)} dibatalkan`); close();
+        } catch (err) { toast(writeErrMsg(err), true); }
+      }) }, 'Batal pesanan'));
+    }
+    acts.append(h('button', { class: 'btn primary', type: 'button', onclick: close }, fresh ? 'Pesanan baru' : 'Tutup'));
+    box.append(
+      mhead(fresh ? `Pesanan ${noStr(o.no)} selesai` : `Pesanan ${noStr(o.no)}`, `${fmtDate(date)} ${fmtTime(o.t)} · ${PAY[o.pay] || o.pay}${o.status === 'void' ? ' · DIBATALKAN' : ''}`),
+      fresh && o.pay === 'cash' && toSen(o.chg) > 0 ? h('div', { class: 'change-callout' }, h('span', { text: 'Beri baki' }), h('strong', { text: RM(toSen(o.chg)) })) : null,
+      h('div', { class: 'paper' }, pre),
+      acts);
+  });
+}
+function printReceipt(text) {
+  $('#print-area').replaceChildren(h('pre', { text }));
+  try { window.print(); } catch (e) {}
+}
+
+/* Orders view */
+function ordDoc() { return S.ordDate === S.today ? S.day : S.ordDay; }
+function setOrdDate(d) {
+  if (!d) return;
+  if (d > S.today) d = S.today;
+  S.ordDate = d;
+  if (S.ordUnsub) { S.ordUnsub(); S.ordUnsub = null; }
+  S.ordDay = null;
+  if (d !== S.today && S.store) {
+    S.ordLoading = true;
+    S.ordUnsub = S.store.onDay(d, doc => { S.ordDay = doc; S.ordLoading = false; if (S.view === 'pesanan') renderOrders(); }, onErr);
+  }
+  renderOrders();
+}
+function itemsSummary(o) {
+  const parts = (o.items || []).map(it => `${it.q}× ${it.n}`);
+  return parts.length > 3 ? parts.slice(0, 3).join(', ') + ` +${parts.length - 3} lagi` : parts.join(', ');
+}
+function renderOrders() {
+  $('#od-date').value = S.ordDate; $('#od-date').max = S.today;
+  $('#od-next').disabled = S.ordDate >= S.today;
+  const body = $('#od-body'), sum = $('#od-sum');
+  if (S.mode === 'nodb') { sum.textContent = ''; body.replaceChildren(h('p', { class: 'notice', text: 'Kaunter belum disambung ke Google Sheet. Pergi ke Tetapan untuk menyambung.' })); return; }
+  const loading = S.mode === 'loading' || (S.ordDate === S.today ? !S.dayLoaded : S.ordLoading);
+  if (loading) { sum.textContent = ''; body.replaceChildren(h('p', { class: 'muted', text: 'Memuatkan pesanan…' })); return; }
+  const doc = ordDoc();
+  const os = doc && doc.orders ? Object.values(doc.orders).sort((a, b) => b.t - a.t) : [];
+  const paid = os.filter(o => o.status !== 'void');
+  const voided = os.length - paid.length;
+  sum.replaceChildren(longDate(S.ordDate) + ' · ', h('strong', { text: `${paid.length} pesanan` }), ' · ', h('strong', { text: RM(paid.reduce((a, o) => a + toSen(o.total), 0)) }), voided ? ` · ${voided} dibatalkan` : '');
+  if (!os.length) {
+    body.replaceChildren(emptyState('Tiada pesanan pada tarikh ini', S.ordDate === S.today ? 'Pesanan yang sudah dibayar hari ini akan tersenarai di sini.' : 'Pilih tarikh lain untuk melihat pesanan.'));
+    return;
+  }
+  const tbody = h('tbody', {}, os.map(o => {
+    const open = () => showReceipt(o, S.ordDate, false);
+    return h('tr', { class: 'click' + (o.status === 'void' ? ' void' : ''), onclick: open },
+      h('td', {}, h('button', { class: 'no-btn', type: 'button', 'aria-label': `Lihat resit ${noStr(o.no)}`, onclick: e => { e.stopPropagation(); open(); } }, noStr(o.no))),
+      h('td', { text: fmtTime(o.t) }),
+      h('td', { text: ticketLabel(o) }),
+      h('td', { class: 'items', text: itemsSummary(o) }),
+      h('td', { text: PAY[o.pay] || o.pay }),
+      h('td', { class: 'num', text: fmt(toSen(o.total)) }),
+      h('td', {}, h('span', { class: 'pill ' + (o.status === 'void' ? 'void' : 'paid'), text: o.status === 'void' ? 'Dibatalkan' : 'Dibayar' })));
+  }));
+  body.replaceChildren(h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' },
+    h('thead', {}, h('tr', {}, ['No', 'Masa', 'Jenis', 'Item', 'Bayaran'].map(t => h('th', { text: t })), h('th', { class: 'num', text: 'Jumlah (RM)' }), h('th', { text: 'Status' }))),
+    tbody)));
+}
+
+/* Report */
+function rangeOf(key) {
+  const t = dkey();
+  if (key === 'yest') { const y = addDays(t, -1); return [y, y]; }
+  if (key === '7d') return [addDays(t, -6), t];
+  if (key === 'month') return [t.slice(0, 8) + '01', t];
+  if (key === 'lastmonth') { const d = new Date(); return [dkey(new Date(d.getFullYear(), d.getMonth() - 1, 1)), dkey(new Date(d.getFullYear(), d.getMonth(), 0))]; }
+  return [t, t];
+}
+async function loadReport() {
+  if (S.rep.range !== 'custom') [S.rep.from, S.rep.to] = rangeOf(S.rep.range);
+  if (!S.store) { renderReport(); return; }
+  const token = ++S.rep.token;
+  S.rep.loading = true; S.rep.err = null; renderReport();
+  try {
+    const days = await S.store.getRange(S.rep.from, S.rep.to);
+    if (token !== S.rep.token) return;
+    if (S.day && S.today >= S.rep.from && S.today <= S.rep.to) days[S.today] = S.day;
+    S.rep.days = days;
+  } catch (e) { if (token !== S.rep.token) return; S.rep.err = e; S.rep.days = null; }
+  S.rep.loading = false; renderReport();
+}
+function aggregate(days) {
+  const R = { orders: 0, items: 0, sub: 0, disc: 0, svc: 0, sst: 0, del: 0, rnd: 0, total: 0, voidN: 0, voidAmt: 0, pay: {}, ch: {}, items_: new Map(), byHour: Array.from({ length: 24 }, () => ({ v: 0, n: 0 })), byDay: {} };
+  for (const [date, doc] of Object.entries(days || {})) {
+    for (const o of doc && doc.orders ? Object.values(doc.orders) : []) {
+      const tot = toSen(o.total);
+      if (o.status === 'void') { R.voidN++; R.voidAmt += tot; continue; }
+      R.orders++; R.sub += toSen(o.sub); R.disc += toSen(o.disc); R.svc += toSen(o.svc); R.sst += toSen(o.sst); R.del += toSen(o.del); R.rnd += toSen(o.rnd); R.total += tot;
+      const p = R.pay[o.pay] = R.pay[o.pay] || { n: 0, v: 0 }; p.n++; p.v += tot;
+      const ch = R.ch[typeName(o)] = R.ch[typeName(o)] || { n: 0, v: 0 }; ch.n++; ch.v += tot;
+      const hr = R.byHour[new Date(o.t).getHours()]; hr.v += tot; hr.n++;
+      const bd = R.byDay[date] = R.byDay[date] || { v: 0, n: 0 }; bd.v += tot; bd.n++;
+      for (const it of o.items || []) {
+        R.items += it.q;
+        const m = R.items_.get(it.n) || { n: it.n, q: 0, v: 0 };
+        m.q += it.q; m.v += (toSen(it.p) + toSen(it.mp)) * it.q; R.items_.set(it.n, m);
+      }
+    }
+  }
+  return R;
+}
+function niceTicks(max) {
+  if (max <= 0) return [0, 500, 1000];
+  const rough = max / 4, mag = Math.pow(10, Math.floor(Math.log10(rough))), norm = rough / mag;
+  const step = Math.max(100, (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag);
+  const top = Math.ceil(max / step) * step, out = [];
+  for (let v = 0; v <= top + 0.5; v += step) out.push(v);
+  return out;
+}
+const axisFmt = s => { const v = s / 100; return v >= 10000 ? (v / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'K' : v.toLocaleString('en-US'); };
+function barChart(host, bars, label) {
+  host.replaceChildren();
+  const Wd = Math.max(280, Math.floor(host.clientWidth || 600)), Ht = 220;
+  const pl = 44, pr = 6, pt = 12, pb = 26, iw = Wd - pl - pr, ih = Ht - pt - pb, y0 = pt + ih;
+  const ticks = niceTicks(Math.max(0, ...bars.map(b => b.v))), top = ticks[ticks.length - 1];
+  const svg = sv('svg', { viewBox: `0 0 ${Wd} ${Ht}`, width: Wd, height: Ht, role: 'img', 'aria-label': label, class: 'chart' });
+  const band = iw / bars.length, bw = Math.max(2, Math.min(24, band - 2)), every = Math.max(1, Math.ceil(38 / band));
+  const tip = h('div', { class: 'tip', hidden: true });
+  const hits = sv('g', {}), marks = sv('g', {});
+  bars.forEach((b, i) => {
+    const x = pl + i * band + (band - bw) / 2, bh = b.v / top * ih;
+    const hit = sv('rect', { x: pl + i * band, y: pt, width: band, height: ih, class: 'hit', tabindex: '0', 'aria-label': `${b.tip}: ${RM(b.v)}, ${b.n} pesanan` });
+    const show = () => {
+      tip.replaceChildren(h('strong', { text: RM(b.v) }), h('span', { text: `${b.tip} · ${b.n} pesanan` }));
+      tip.hidden = false;
+      const scale = host.clientWidth / Wd || 1;
+      tip.style.left = Math.min(Math.max((pl + i * band + band / 2) * scale, 80), host.clientWidth - 80) + 'px';
+      tip.style.top = Math.max(36, (y0 - bh - 6) * scale) + 'px';
+      hit.classList.add('on');
+    };
+    const hide = () => { tip.hidden = true; hit.classList.remove('on'); };
+    hit.addEventListener('pointerenter', show); hit.addEventListener('pointerleave', hide);
+    hit.addEventListener('focus', show); hit.addEventListener('blur', hide);
+    hits.append(hit);
+    if (bh > 0) {
+      const r = Math.min(4, bh, bw / 2), y = y0 - bh;
+      marks.append(sv('path', { class: 'bar', d: `M${x},${y0}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${y0}Z` }));
+    }
+    if (i % every === 0) marks.append(sv('text', { x: pl + i * band + band / 2, y: Ht - 8, 'text-anchor': 'middle', class: 'tick' }, b.label));
+  });
+  ticks.forEach(t => {
+    const y = y0 - t / top * ih;
+    svg.append(sv('line', { x1: pl, x2: Wd - pr, y1: y, y2: y, class: t === 0 ? 'base' : 'gl' }));
+    svg.append(sv('text', { x: pl - 8, y: y + 4, 'text-anchor': 'end', class: 'tick' }, axisFmt(t)));
+  });
+  svg.append(hits, marks);
+  host.append(svg, tip);
+}
+function renderReport() {
+  $('#rep-chips').replaceChildren(...RANGES.map(([k, v]) => h('button', {
+    class: 'chip', type: 'button', 'aria-pressed': S.rep.range === k ? 'true' : 'false',
+    onclick: () => { S.rep.range = k; loadReport(); },
+  }, v)));
+  $('#rep-from').value = S.rep.from; $('#rep-to').value = S.rep.to;
+  $('#rep-from').max = S.today; $('#rep-to').max = S.today;
+  $('#rep-csv').hidden = !canDownload();
+  const body = $('#rep-body');
+  if (S.mode === 'nodb') { body.replaceChildren(h('p', { class: 'notice', text: 'Kaunter belum disambung ke Google Sheet. Pergi ke Tetapan untuk menyambung.' })); return; }
+  if (S.rep.err) { body.replaceChildren(h('p', { class: 'notice', text: 'Laporan tidak dapat dimuatkan. Semak sambungan dan pilih tempoh sekali lagi.' })); return; }
+  if (S.mode === 'loading' || !S.rep.days) { body.replaceChildren(h('p', { class: 'muted', text: 'Mengira laporan…' })); return; }
+  const { from, to } = S.rep, single = from === to;
+  const period = single ? longDate(from) : `${shortDate(from)} – ${shortDate(to)} ${to.slice(0, 4)}`;
+  const R = aggregate(S.rep.days);
+  $('#rep-csv').disabled = !R.orders && !R.voidN;
+  if (!R.orders && !R.voidN) {
+    body.replaceChildren(h('p', { class: 'period', text: period }),
+      emptyState('Tiada jualan dalam tempoh ini', single && from === S.today ? 'Jualan hari ini akan muncul di sini sebaik pesanan pertama dibayar.' : 'Cuba pilih tempoh lain.'));
+    return;
+  }
+  const kpi = (lbl, val, sub, cls) => h('div', { class: 'kpi' + (cls ? ' ' + cls : '') }, h('span', { class: 'lbl', text: lbl }), h('span', { class: 'val', text: val }), sub ? h('span', { class: 'sub', text: sub }) : null);
+  const kpis = h('div', { class: 'kpis' },
+    kpi('Jumlah kutipan', RM(R.total), period, 'hero'),
+    kpi('Pesanan', R.orders.toLocaleString('en-US'), R.voidN ? `${R.voidN} dibatalkan` : 'tiada pembatalan'),
+    kpi('Purata bil', R.orders ? RM(Math.round(R.total / R.orders)) : '–', 'setiap pesanan'),
+    kpi('Item terjual', R.items.toLocaleString('en-US'), `${R.items_.size} jenis item`));
+
+  // chart
+  let bars;
+  if (single) {
+    const hrs = R.byHour.map((x, i) => x.n ? i : -1).filter(i => i >= 0);
+    const lo = Math.min(8, ...hrs), hi = Math.max(22, ...hrs);
+    bars = []; for (let i = lo; i <= hi; i++) bars.push({ label: pad(i), tip: `${pad(i)}:00–${pad((i + 1) % 24)}:00`, v: R.byHour[i].v, n: R.byHour[i].n });
+  } else {
+    bars = []; for (let d = from; d <= to; d = addDays(d, 1)) { const x = R.byDay[d] || { v: 0, n: 0 }; const dt = parseKey(d); bars.push({ label: `${dt.getDate()}/${dt.getMonth() + 1}`, tip: longDate(d), v: x.v, n: x.n }); }
+  }
+  const chartHost = h('div', { class: 'chart-host' });
+  const chartCard = h('section', { class: 'card' },
+    h('h2', { text: single ? 'Kutipan ikut jam' : 'Kutipan ikut hari' }),
+    h('p', { class: 'cap', text: 'RM, pesanan dibayar sahaja. Halakan atau tab pada bar untuk butiran.' }),
+    chartHost);
+
+  // payment
+  const payRows = Object.keys(PAY).filter(k => R.pay[k]).map(k => {
+    const p = R.pay[k], pct = R.total ? Math.round(p.v / R.total * 100) : 0;
+    return h('tr', {}, h('td', { text: PAY[k] }), h('td', { class: 'num', text: p.n }),
+      h('td', {}, h('div', { class: 'meter', role: 'img', 'aria-label': pct + '%' }, h('span', { style: `width:${pct}%` }))),
+      h('td', { class: 'num', text: fmt(p.v) }));
+  });
+  const chOrder = ['Kedai', 'Pickup', ...APPS];
+  const chKeys = [...chOrder.filter(k => R.ch[k]), ...Object.keys(R.ch).filter(k => !chOrder.includes(k))];
+  const chCard = h('section', { class: 'card' },
+    h('h2', { text: 'Saluran jualan' }), h('p', { class: 'cap', text: 'Bilangan pesanan dan jumlah (RM)' }),
+    h('table', { class: 'tbl' }, h('tbody', {}, chKeys.map(k => {
+      const x = R.ch[k], pct = R.total ? Math.round(x.v / R.total * 100) : 0;
+      return h('tr', {}, h('td', { text: k }), h('td', { class: 'num', text: x.n }),
+        h('td', {}, h('div', { class: 'meter', role: 'img', 'aria-label': pct + '%' }, h('span', { style: `width:${pct}%` }))),
+        h('td', { class: 'num', text: fmt(x.v) }));
+    }))));
+  const payCard = h('section', { class: 'card' },
+    h('h2', { text: 'Kaedah bayaran' }), h('p', { class: 'cap', text: 'Bilangan pesanan dan jumlah (RM)' }),
+    h('table', { class: 'tbl' }, h('tbody', {}, payRows)),
+    h('div', { class: 'callout' }, h('span', { text: 'Tunai sepatutnya ada dalam laci' }), h('strong', { text: RM((R.pay.cash || { v: 0 }).v) })));
+
+  // z summary
+  const z = [['Jualan kasar', fmt(R.sub)], ['Diskaun', R.disc ? '-' + fmt(R.disc) : '0.00']];
+  if (R.svc) z.push(['Caj perkhidmatan', fmt(R.svc)]);
+  if (R.sst) z.push(['SST', fmt(R.sst)]);
+  if (R.del) z.push(['Caj delivery', fmt(R.del)]);
+  if (R.rnd) z.push(['Pembundaran tunai', (R.rnd > 0 ? '+' : '') + fmt(R.rnd)]);
+  const zCard = h('section', { class: 'card' },
+    h('h2', { text: 'Ringkasan tutup kedai' }), h('p', { class: 'cap', text: 'Jualan kasar ditolak diskaun, ditambah caj dan cukai, sama dengan kutipan.' }),
+    h('dl', { class: 'zrows' },
+      ...z.flatMap(([a, b]) => [h('dt', { text: a }), h('dd', { text: b })]),
+      h('dt', { class: 'tot', text: 'Jumlah kutipan' }), h('dd', { class: 'tot', text: fmt(R.total) }),
+      h('dt', { text: `Dibatalkan (${R.voidN})` }), h('dd', { text: fmt(R.voidAmt) })));
+
+  // top items
+  const top = [...R.items_.values()].sort((a, b) => b.q - a.q || b.v - a.v).slice(0, 10);
+  const itemsCard = h('section', { class: 'card' },
+    h('h2', { text: 'Item terlaris' }), h('p', { class: 'cap', text: 'Ikut kuantiti; jualan sebelum diskaun pesanan' }),
+    h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, h('th', { text: 'Item' }), h('th', { class: 'num', text: 'Qty' }), h('th', { class: 'num', text: 'RM' }))),
+      h('tbody', {}, top.map(m => h('tr', {}, h('td', { text: m.n }), h('td', { class: 'num', text: m.q }), h('td', { class: 'num', text: fmt(m.v) }))))));
+
+  body.replaceChildren(kpis, h('div', { class: 'rep-grid' },
+    h('div', { class: 'stack' }, chartCard, itemsCard),
+    h('div', { class: 'stack' }, chCard, payCard, zCard)));
+  barChart(chartHost, bars, `${single ? 'Kutipan ikut jam' : 'Kutipan ikut hari'}, ${period}`);
+  S.rep.lastBars = { host: chartHost, bars, label: single ? 'Kutipan ikut jam' : 'Kutipan ikut hari' };
+}
+function exportCSV() {
+  const esc = v => {
+    if (typeof v === 'number') return String(v);
+    let s = String(v == null ? '' : v);
+    if (/^[=+@\t]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows = [['Tarikh', 'Masa', 'No', 'Jenis', 'Nama', 'Item', 'Jumlah kecil', 'Diskaun', 'Caj perkhidmatan', 'SST', 'Caj delivery', 'Pembundaran', 'Jumlah', 'Bayaran', 'Status']];
+  Object.keys(S.rep.days || {}).sort().forEach(date => {
+    const doc = S.rep.days[date];
+    Object.values(doc && doc.orders || {}).sort((a, b) => a.t - b.t).forEach(o => rows.push([
+      date, fmtTime(o.t), o.no, typeName(o), o.ref || '',
+      (o.items || []).map(it => `${it.q}x ${it.n}${it.m && it.m.length ? ' (' + it.m.join(', ') + ')' : ''}`).join('; '),
+      o.sub, o.disc, o.svc, o.sst, o.del || 0, o.rnd, o.total, PAY[o.pay] || o.pay, o.status === 'void' ? 'Dibatalkan' : 'Dibayar']));
+  });
+  saveFile(`jualan_${S.rep.from}_${S.rep.to}.csv`, '﻿' + rows.map(r => r.map(esc).join(',')).join('\r\n'));
+}
+
+/* Menu admin */
+function renderMenuAdmin() {
+  const list = $('#menu-list');
+  $('#btn-add-item').hidden = !S.canWrite || S.mode === 'nodb';
+  if (S.mode === 'nodb') { list.replaceChildren(h('p', { class: 'notice', text: 'Kaunter belum disambung ke Google Sheet. Pergi ke Tetapan untuk menyambung.' })); return; }
+  if (S.mode === 'loading' || !S.menuLoaded) { list.replaceChildren(h('p', { class: 'muted', text: 'Memuatkan menu…' })); return; }
+  if (!S.menu.length) {
+    list.replaceChildren(emptyState('Menu masih kosong', 'Tambah item pertama: nama, harga dan kategori. Pilihan seperti “Ais, 0.30” atau “Tambah telur, 1.50” boleh diletak pada setiap item.',
+      S.canWrite ? h('button', { class: 'btn primary', type: 'button', onclick: () => openItemForm() }, '+ Tambah item') : null));
+    return;
+  }
+  const q = ($('#mq').value || '').trim().toLowerCase();
+  const items = sortedMenu().filter(i => !q || String(i.name).toLowerCase().includes(q) || catOf(i).toLowerCase().includes(q));
+  if (!items.length) { list.replaceChildren(h('p', { class: 'muted', text: 'Tiada item sepadan.' })); return; }
+  const groups = new Map();
+  items.forEach(i => { const c = catOf(i); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(i); });
+  const allCats = cats();
+  const moveItems = S.canWrite && !q, moveCats = S.canAdmin && S.mode === 'db' || S.mode === 'local';
+  const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.mv : null;
+  const mv = (key, label, upOff, downOff, fn) => h('div', { class: 'mv', role: 'group', 'aria-label': label },
+    h('button', { type: 'button', 'aria-label': 'Naik', title: 'Naik', 'data-mv': key + ':up', disabled: upOff || S.menuBusy, onclick: () => fn(-1) }, '▲'),
+    h('button', { type: 'button', 'aria-label': 'Turun', title: 'Turun', 'data-mv': key + ':down', disabled: downOff || S.menuBusy, onclick: () => fn(1) }, '▼'));
+  const hint = !q && (moveItems || moveCats) ? h('p', { class: 'hint', style: 'margin:-4px 0 14px', text: moveCats
+    ? 'Guna ▲ ▼ untuk susun kategori dan item. Susunan yang sama digunakan di skrin Jualan.'
+    : 'Guna ▲ ▼ untuk susun item dalam kategori. Susunan kategori hanya boleh diubah oleh pemilik.' }) : null;
+  list.replaceChildren(...(hint ? [hint] : []), ...[...groups].map(([c, arr]) => {
+    const ci = allCats.indexOf(c);
+    return h('section', { class: 'mgroup' },
+      h('div', { class: 'mg-head' },
+        h('h2', {}, c, h('span', { class: 'count zero', text: arr.length })),
+        moveCats && !q && allCats.length > 1 ? mv('cat-' + c, `Susun kategori ${c}`, ci <= 0, ci >= allCats.length - 1, d => moveCat(c, d)) : null),
+      h('div', { class: 'mrows' }, arr.map((i, idx) => {
+        const on = i.avail !== false;
+        return h('div', { class: 'mrow' + (on ? '' : ' off') },
+          moveItems ? (arr.length > 1 ? mv('item-' + i.id, `Susun ${i.name}`, idx === 0, idx === arr.length - 1, d => moveItem(i, d)) : h('div', { class: 'mv', 'aria-hidden': 'true', style: 'width:28px' })) : null,
+          h('div', { class: 'mrow-main' }, h('strong', { text: i.name }),
+            i.mods && i.mods.length ? h('span', { class: 'muted small', text: i.mods.map(m => m.n + (toSen(m.p) ? ' +' + fmt(toSen(m.p)) : '')).join(' · ') }) : null),
+          h('span', { class: 'price', text: fmt(toSen(i.price)) }),
+          h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': `${i.name} ada stok`, disabled: !S.canWrite,
+            onclick: async e => {
+              const b = e.currentTarget; b.disabled = true;
+              try { await W(() => S.store.saveItem({ ...clone(i), avail: !on })); toast(`${i.name}: ${on ? 'ditanda habis' : 'ada semula'}`); }
+              catch (err) { toast(writeErrMsg(err), true); b.disabled = false; }
+            } }, h('span', { class: 'knob' }), h('span', { class: 'sw-lbl', text: on ? 'Ada' : 'Habis' })),
+          h('button', { class: 'btn sm edit', type: 'button', disabled: !S.canWrite, onclick: () => openItemForm(i) }, 'Ubah'));
+      })));
+  }));
+  if (focused) { const b = list.querySelector(`[data-mv="${CSS.escape(focused)}"]`); if (b && !b.disabled) b.focus(); }
+}
+async function moveItem(item, dir) {
+  if (S.menuBusy || !guardWrite()) return;
+  const c = catOf(item);
+  const arr = sortedMenu().filter(i => catOf(i) === c);
+  const a = arr.findIndex(x => x.id === item.id), b = a + dir;
+  if (a < 0 || b < 0 || b >= arr.length) return;
+  [arr[a], arr[b]] = [arr[b], arr[a]];
+  const changes = arr.map((x, k) => ({ x, n: (k + 1) * 10 })).filter(({ x, n }) => x.sort !== n);
+  S.menuBusy = true; renderMenuAdmin();
+  try { await S.store.saveItems(changes.map(({ x, n }) => ({ ...clone(x), sort: n }))); }
+  catch (e) { toast(writeErrMsg(e), true); }
+  S.menuBusy = false; renderView();
+}
+async function moveCat(c, dir) {
+  if (S.menuBusy || !S.store) return;
+  if (!S.canAdmin) { toast('Hanya Editor atau pemilik boleh susun kategori.', true); return; }
+  const arr = cats(), a = arr.indexOf(c), b = a + dir;
+  if (a < 0 || b < 0 || b >= arr.length) return;
+  [arr[a], arr[b]] = [arr[b], arr[a]];
+  S.menuBusy = true; renderMenuAdmin();
+  try { await W(() => S.store.patchConfig({ cats: arr })); }
+  catch (e) { toast(writeErrMsg(e), true); }
+  S.menuBusy = false; renderView();
+}
+function openItemForm(item) {
+  const isNew = !item;
+  modal((box, close) => {
+    const name = h('input', { id: 'i-name', value: item ? item.name : '', maxlength: '60', autocomplete: 'off', autofocus: true });
+    const price = h('input', { id: 'i-price', inputmode: 'decimal', value: item ? (toSen(item.price) / 100).toFixed(2) : '', placeholder: '0.00', autocomplete: 'off' });
+    const cat = h('input', { id: 'i-cat', list: 'cat-list', value: item ? (item.cat || '') : (S.cat !== 'Semua' ? S.cat : ''), maxlength: '30', autocomplete: 'off', placeholder: 'cth. Minuman' });
+    const dl = h('datalist', { id: 'cat-list' }, cats().map(c => h('option', { value: c })));
+    const mods = h('textarea', { id: 'i-mods', rows: '4', value: modsText(item && item.mods), placeholder: 'Ais, 0.30\nKurang manis\nTambah telur, 1.50' });
+    const avail = h('input', { type: 'checkbox', id: 'i-avail', checked: item ? item.avail !== false : true });
+    const err = h('p', { class: 'err', role: 'alert' });
+    const save = h('button', { class: 'btn primary', type: 'submit' }, isNew ? 'Tambah item' : 'Simpan');
+    const form = h('form', { class: 'form', novalidate: true, onsubmit: async e => {
+      e.preventDefault();
+      const n = name.value.trim(), pr = price.value.trim().replace(/^RM\s*/i, '');
+      if (!n) { err.textContent = 'Masukkan nama item.'; name.focus(); return; }
+      if (!/^\d{1,5}(\.\d{1,2})?$/.test(pr)) { err.textContent = 'Masukkan harga dalam RM, cth. 4.50'; price.focus(); return; }
+      if (!guardWrite()) return;
+      save.disabled = true; err.textContent = '';
+      const rec = { id: item ? item.id : uid(), name: n, price: r2(toSen(pr)), cat: cat.value.trim().slice(0, 30), mods: parseMods(mods.value), avail: avail.checked };
+      if (item && item.sort != null) rec.sort = item.sort;
+      try { await W(() => S.store.saveItem(rec)); toast(isNew ? `${n} ditambah` : `${n} dikemas kini`); close(); }
+      catch (ex) { err.textContent = writeErrMsg(ex); save.disabled = false; }
+    } },
+      h('label', {}, 'Nama item', name),
+      h('div', { class: 'two' }, h('label', {}, 'Harga (RM)', price), h('label', {}, 'Kategori', cat, dl)),
+      h('label', {}, 'Pilihan tambahan', mods, h('span', { class: 'hint', text: 'Satu pilihan setiap baris. Tambah harga selepas koma jika ada caj, cth. “Ais, 0.30”.' })),
+      h('label', { class: 'check' }, avail, 'Ada stok (boleh dijual)'),
+      err,
+      h('div', { class: 'modal-actions' },
+        !isNew ? h('button', { class: 'btn danger', type: 'button', onclick: ev => armConfirm(ev.currentTarget, 'Sahkan padam', async () => {
+          try { await W(() => S.store.deleteItem(item.id)); toast(`${item.name} dipadam`); close(); } catch (ex) { err.textContent = writeErrMsg(ex); }
+        }) }, 'Padam') : null,
+        h('span', { class: 'grow' }),
+        h('button', { class: 'btn', type: 'button', onclick: close }, 'Batal'),
+        save));
+    box.append(mhead(isNew ? 'Item baru' : 'Ubah item'), form);
+  });
+}
+
+/* Settings */
+function renderSettings() {
+  renderLook();
+  const ro = S.mode === 'nodb' || S.mode === 'loading' || !S.canAdmin;
+  ['#set-fs', '#set-fs2', '#set-fs3'].forEach(s => { $(s).disabled = ro; });
+  $('#s-save').hidden = ro;
+  if (!S.setDirty) {
+    const c = S.cfg;
+    $('#s-name').value = c.name || ''; $('#s-address').value = c.address || ''; $('#s-phone').value = c.phone || ''; $('#s-sstno').value = c.sstNo || '';
+    $('#s-sst').value = c.sst || 0; $('#s-svc').value = c.svc || 0; $('#s-round').checked = !!c.round5;
+    $('#s-paper').value = c.paper === '80' ? '80' : '58'; $('#s-footer').value = c.footer || '';
+  }
+  const about = $('#data-about');
+  const p = t => h('p', { text: t });
+  about.replaceChildren(h('h2', { text: 'Di mana data disimpan' }),
+    p('Menu, tetapan, pesanan tertangguh dan jualan disimpan dalam Google Sheet anda. Setiap peranti menyemak perubahan setiap 30 saat, dan serta-merta selepas setiap simpanan.'),
+    p('Jangan tukar nama tab atau susunan lajur dalam tab Jualan, Item, Menu, Tetapan dan Tertangguh. Anda boleh ubah harga, nama item dan stok terus dalam tab Menu.'));
+}
+async function saveSettings(e) {
+  e.preventDefault();
+  const err = $('#s-err'); err.textContent = '';
+  const num = id => { const v = $(id).value.trim().replace(',', '.'); return v === '' ? 0 : Number(v); };
+  const sst = num('#s-sst'), svc = num('#s-svc');
+  if (!(sst >= 0 && sst <= 100) || !(svc >= 0 && svc <= 100)) { err.textContent = 'Kadar SST dan caj perkhidmatan mesti antara 0 dan 100.'; return; }
+  const name = $('#s-name').value.trim();
+  if (!name) { err.textContent = 'Masukkan nama kedai.'; $('#s-name').focus(); return; }
+  if (!S.canAdmin || !S.store) return;
+  const cfg = {
+    ...S.cfg,
+    name, address: $('#s-address').value.trim(), phone: $('#s-phone').value.trim(), sstNo: $('#s-sstno').value.trim(),
+    sst, svc, round5: $('#s-round').checked, paper: $('#s-paper').value, footer: $('#s-footer').value.trim(),
+  };
+  const btn = $('#s-save'); btn.disabled = true;
+  try { await W(() => S.store.saveConfig(cfg)); S.setDirty = false; toast('Tetapan disimpan'); }
+  catch (ex) { err.textContent = writeErrMsg(ex); }
+  btn.disabled = false;
+}
+
+/* ---------- connection screen ---------- */
+function renderConn() {
+  const on = !!S.conn;
+  let msg, bad = false;
+  if (!on) msg = 'Belum disambung. Masukkan URL skrip Google Sheets dan PIN, kemudian tekan Sambung. Langkah persediaan ada dalam README repo.';
+  else if (S.connErr) { msg = writeErrMsg({ code: S.connErr, message: S.connErrMsg }); bad = true; }
+  else if (S.synced) msg = 'Bersambung. Kali terakhir disegerakkan pukul ' + fmtTime(S.lastSync) + '.';
+  else msg = 'Menyambung…';
+  const st = $('#conn-status'); st.textContent = msg; st.className = 'small gs-status' + (bad ? ' bad' : '');
+  $('#conn-form').hidden = on && S.connErr !== 'bad_pin' && S.connErr !== 'http' && S.connErr !== 'bad_reply';
+  $('#conn-actions').hidden = !on;
+  if (on && document.activeElement !== $('#c-url') && !$('#c-url').value) $('#c-url').value = S.conn.url;
+  const url = S.store && S.store.sheetUrl;
+  $('#c-open').hidden = !url; if (url) $('#c-open').href = url;
+  const rl = $('#rep-gs'); rl.hidden = !url; if (url) rl.href = url;
+}
+async function connectSheets() {
+  const url = $('#c-url').value.trim(), pin = $('#c-pin').value.trim();
+  if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { toast('URL skrip tidak sah. Ia bermula dengan https://script.google.com/macros/s/', true); return; }
+  if (!pin) { toast('Masukkan PIN.', true); $('#c-pin').focus(); return; }
+  const b = $('#c-save'); b.disabled = true; b.textContent = 'Menyemak…';
+  try {
+    const j = await apiCall({ url, pin }, 'ping', {}, 30000);
+    saveConn({ url, pin });
+    toast('Bersambung' + (j.name ? ': ' + j.name : ''));
+    setTimeout(() => { location.hash = 'jualan'; location.reload(); }, 700);
+  } catch (e) { toast(writeErrMsg(e), true); b.disabled = false; b.textContent = 'Sambung'; }
+}
+function setupLink() {
+  const data = btoa(unescape(encodeURIComponent(JSON.stringify({ u: S.conn.url, p: S.conn.pin }))));
+  return location.origin + location.pathname + '#sambung=' + data;
+}
+function readSetupHash() {
+  const m = location.hash.match(/^#sambung=(.+)$/);
+  if (!m) return;
+  try { const o = JSON.parse(decodeURIComponent(escape(atob(m[1])))); if (o && o.u && o.p) saveConn({ url: o.u, pin: o.p }); } catch (e) {}
+  history.replaceState(null, '', location.pathname + location.search + '#jualan');
+}
+
+/* ---------- data wiring ---------- */
+function subToday() {
+  if (S.todayUnsub) S.todayUnsub();
+  S.today = dkey(); S.day = null; S.dayLoaded = false;
+  S.todayUnsub = S.store.onDay(S.today, d => {
+    S.day = d; S.dayLoaded = true;
+    if (S.rep.days && S.today >= S.rep.from && S.today <= S.rep.to) { S.rep.days = { ...S.rep.days }; if (d) S.rep.days[S.today] = d; else delete S.rep.days[S.today]; }
+    renderTicket();
+    if (S.view === 'pesanan' && S.ordDate === S.today) renderOrders();
+    if (S.view === 'laporan') renderReport();
+  }, onErr);
+}
+function attach(store) {
+  S.store = store;
+  const timer = setTimeout(() => { if (!S.synced) { S.slow = true; renderStatus(); } }, 10000);
+  store.onSync = e => {
+    if (e) { S.connErr = e.code || 'network'; S.connErrMsg = e.message || ''; }
+    else { S.connErr = null; S.connErrMsg = ''; S.synced = true; S.slow = false; S.lastSync = Date.now(); clearTimeout(timer); }
+    renderStatus(); renderConn();
+    if (S.view === 'jualan') renderPOS();
+  };
+  store.onConfig(c => {
+    S.cfg = { ...DEF, ...(c || {}) };
+    applyTheme();
+    renderAll();
+  }, onErr);
+  store.onMenu(items => {
+    S.menu = items.filter(i => i && i.name); S.menuLoaded = true;
+    renderAll();
+  }, onErr);
+  store.onOpen(list => { S.open = list.sort((a, b) => (a.t || 0) - (b.t || 0)); renderTicket(); }, onErr);
+  subToday();
+  store.start();
+  if (S.view === 'laporan') loadReport();
+  renderAll();
+}
+
+async function start() {
+  readSetupHash();
+  S.cart = loadDraft() || newCart();
+  if (!ORDER_TYPES.includes(S.cart.type)) { S.cart.type = 'shop'; S.cart.app = ''; }
+  applyTheme();
+  const reTheme = () => { applyTheme(); if (S.view === 'tetapan') renderLook(); if (S.view === 'laporan') renderReport(); };
+  if (darkMq) { if (darkMq.addEventListener) darkMq.addEventListener('change', reTheme); else if (darkMq.addListener) darkMq.addListener(reTheme); }
+  S.conn = loadConn();
+  if (!S.conn && !location.hash) history.replaceState(null, '', location.pathname + location.search + '#tetapan');
+  wire();
+  route();
+  tick(); setInterval(tick, 15000);
+  if (!S.conn) { S.mode = 'nodb'; S.canWrite = false; S.canAdmin = false; renderAll(); return; }
+  S.mode = 'db'; S.canWrite = true; S.canAdmin = true;
+  attach(sheetsAdapter(S.conn));
+}
+
+function tick() {
+  const d = new Date();
+  $('#clock').textContent = `${DAYS[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (S.store && dkey() !== S.today) { subToday(); S.store.sync(true); renderAll(); }
+}
+
+function wire() {
+  window.addEventListener('hashchange', route);
+  $('#q').addEventListener('input', e => { S.q = e.target.value; renderPOS(); });
+  ORDER_TYPES.forEach(k => $('#type-' + k).addEventListener('click', () => { S.cart.type = k; if (k !== 'app') S.cart.app = ''; cartChanged(); }));
+  document.querySelectorAll('#app-row [data-app]').forEach(b => b.addEventListener('click', () => { S.cart.app = b.dataset.app; cartChanged(); }));
+  $('#t-ref').addEventListener('input', e => { S.cart.ref = e.target.value; saveDraft(); if (S.cart.openId) $('#tk-title').textContent = ticketLabel(S.cart); });
+  $('#disc-toggle').addEventListener('click', () => { S.cart.discOpen = true; renderTicket(); $('#t-disc').focus(); });
+  $('#disc-pct').addEventListener('click', () => { S.cart.disc.type = 'pct'; cartChanged(); });
+  $('#disc-amt').addEventListener('click', () => { S.cart.disc.type = 'amt'; cartChanged(); });
+  $('#t-disc').addEventListener('input', e => { S.cart.disc.v = e.target.value.replace(/[^\d.,]/g, ''); saveDraft(); renderTicket(); });
+  $('#disc-x').addEventListener('click', () => { S.cart.disc = { type: 'pct', v: '' }; S.cart.discOpen = false; cartChanged(); });
+  $('#del-toggle').addEventListener('click', () => { S.cart.delOpen = true; renderTicket(); $('#t-del').focus(); });
+  $('#t-del').addEventListener('input', e => { S.cart.del = e.target.value.replace(/[^\d.,]/g, ''); saveDraft(); renderTicket(); });
+  $('#del-x').addEventListener('click', () => { S.cart.del = ''; S.cart.delOpen = false; cartChanged(); });
+  $('#btn-clear').addEventListener('click', e => {
+    if (S.cart.openId) { S.cart = newCart(); cartChanged(); closeTicketPhone(); toast('Pesanan masih disimpan dalam Tertangguh'); return; }
+    armConfirm(e.currentTarget, 'Ketik lagi', () => { S.cart = newCart(); cartChanged(); });
+  });
+  $('#btn-hold').addEventListener('click', holdTicket);
+  $('#btn-pay').addEventListener('click', openPay);
+  $('#btn-held').addEventListener('click', openHeld);
+  $('#cartbar').addEventListener('click', openTicketPhone);
+  $('#tk-back').addEventListener('click', closeTicketPhone);
+  $('#od-prev').addEventListener('click', () => setOrdDate(addDays(S.ordDate, -1)));
+  $('#od-next').addEventListener('click', () => setOrdDate(addDays(S.ordDate, 1)));
+  $('#od-today').addEventListener('click', () => setOrdDate(S.today));
+  $('#od-date').addEventListener('change', e => setOrdDate(e.target.value));
+  const onRange = () => {
+    let f = $('#rep-from').value, t = $('#rep-to').value;
+    if (!f || !t) return;
+    if (f > t) [f, t] = [t, f];
+    if (dayDiff(f, t) > 92) f = addDays(t, -92);
+    S.rep.range = 'custom'; S.rep.from = f; S.rep.to = t; loadReport();
+  };
+  $('#rep-from').addEventListener('change', onRange);
+  $('#rep-to').addEventListener('change', onRange);
+  $('#rep-csv').addEventListener('click', exportCSV);
+  $('#mq').addEventListener('input', renderMenuAdmin);
+  document.querySelectorAll('#mode-seg [data-mode]').forEach(b => b.addEventListener('click', () => {
+    viewMode = b.dataset.mode; store_('kaunter-mode', viewMode); applyTheme(); renderLook();
+  }));
+  $('#c-save').addEventListener('click', connectSheets);
+  $('#c-pin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); connectSheets(); } });
+  $('#c-sync').addEventListener('click', () => { if (S.store) { S.store.sync(true); toast('Menyegerak dengan Google Sheet…'); } });
+  $('#c-copy').addEventListener('click', async () => {
+    const link = setupLink(), box = $('#c-link');
+    box.value = link; box.hidden = false;
+    try { await navigator.clipboard.writeText(link); toast('Pautan disalin. Buka pautan itu pada peranti lain.'); }
+    catch (e) { box.focus(); box.select(); toast('Salin pautan dalam kotak di bawah.'); }
+  });
+  $('#c-off').addEventListener('click', e => armConfirm(e.currentTarget, 'Ketik lagi untuk putuskan', () => {
+    saveConn(null); location.hash = 'tetapan'; location.reload();
+  }));
+  $('#btn-add-item').addEventListener('click', () => openItemForm());
+  $('#set-form').addEventListener('input', () => { S.setDirty = true; });
+  $('#set-form').addEventListener('submit', saveSettings);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('#overlay').hidden) closeModal();
+    else if ($('#ticket').classList.contains('open')) closeTicketPhone();
+  });
+  let rz = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(rz);
+    rz = setTimeout(() => { const b = S.rep.lastBars; if (S.view === 'laporan' && b && document.contains(b.host)) barChart(b.host, b.bars, b.label); }, 150);
+  });
+}
+
+start();
+})();
+</script>
+</body>
+</html>
