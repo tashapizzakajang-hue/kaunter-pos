@@ -463,6 +463,7 @@ input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px
             <button type="button" class="chip sm" data-app="Grab" aria-pressed="false">Grab</button>
             <button type="button" class="chip sm" data-app="Shopee" aria-pressed="false">Shopee</button>
             <button type="button" class="chip sm" data-app="Foodpanda" aria-pressed="false">Foodpanda</button>
+            <button type="button" class="chip sm" data-app="Misi" aria-pressed="false">Misi</button>
           </div>
         </div>
         <div class="tk-lines" id="tk-lines"></div>
@@ -670,7 +671,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const PAY = { cash: 'Tunai', card: 'Kad', qr: 'DuitNow QR', ewallet: 'e-Wallet', app: 'Apps' };
 const TYPES = { shop: 'Kedai', pickup: 'Pickup', app: 'Apps', dine: 'Makan sini', take: 'Bungkus' };
 const ORDER_TYPES = ['shop', 'pickup', 'app'];
-const APPS = ['Grab', 'Shopee', 'Foodpanda'];
+const APPS = ['Grab', 'Shopee', 'Foodpanda', 'Misi'];
 const typeName = o => (o.type === 'app' ? (o.app || 'Apps') : (TYPES[o.type] || 'Kedai'));
 
 /* ---------- themes ---------- */
@@ -1286,7 +1287,7 @@ function quickAmounts(total) {
 }
 function openPay() {
   if (!S.cart.lines.length || !guardWrite()) return;
-  if (S.cart.type === 'app' && !S.cart.app) { toast('Pilih platform: Grab, Shopee atau Foodpanda.', true); return; }
+  if (S.cart.type === 'app' && !S.cart.app) { toast('Pilih platform: Grab, Shopee, Foodpanda atau Misi.', true); return; }
   if ((S.cfg.staff || []).length && !(S.cfg.staff || []).includes(S.cart.staff)) { toast('Pilih staf dulu.', true); return; }
   const keys = S.cart.type === 'app' ? ['app', 'cash', 'card', 'qr', 'ewallet'] : ['cash', 'card', 'qr', 'ewallet'];
   let method = keys[0], busy = false;
@@ -1371,7 +1372,7 @@ function wrapText(s, w) {
   return out.length ? out : [''];
 }
 const LOGO_SRC = 'logo.png';
-const APP_VERSION = '2026-11-23f';
+const APP_VERSION = '2026-11-23g';
 // Remembers a logo that failed to load, so later receipts fall back to the shop name at once.
 const logoState = { failed: false };
 (() => { const im = new Image(); im.onerror = () => { logoState.failed = true; }; im.src = LOGO_SRC; })();

@@ -25,7 +25,7 @@ const SALES_COLS = 18, C_DATE = 1, C_TIME = 2, C_NO = 3, C_STATUS = 15, C_ID = 1
 const ITEM_COLS = 12, I_STATUS = 9, I_ID = 10;
 const PAY = { cash: 'Tunai', card: 'Kad', qr: 'DuitNow QR', ewallet: 'e-Wallet', app: 'Apps' };
 const TYPES = { shop: 'Kedai', pickup: 'Pickup', app: 'Apps', dine: 'Makan sini', take: 'Bungkus' };
-const APPS = ['Grab', 'Shopee', 'Foodpanda'];
+const APPS = ['Grab', 'Shopee', 'Foodpanda', 'Misi'];
 // Tetapan: label in column A, value in column B.
 const CFG = [
   ['name', 'Nama kedai'], ['address', 'Alamat'], ['phone', 'Telefon'], ['sstNo', 'No. pendaftaran SST'],

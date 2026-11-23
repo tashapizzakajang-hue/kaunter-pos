@@ -6,7 +6,7 @@ Sistem kaunter (POS) untuk kedai F&B kecil. Ia berjalan dalam pelayar pada table
 
 ## Apa yang ada
 
-- **Jualan:** menu ikut kategori, troli, pesanan Kedai / Pickup / Apps (Grab, Shopee, Foodpanda), diskaun, caj delivery, simpan pesanan untuk bayar kemudian.
+- **Jualan:** menu ikut kategori, troli, pesanan Kedai / Pickup / Apps (Grab, Shopee, Foodpanda, Misi), diskaun, caj delivery, simpan pesanan untuk bayar kemudian.
 - **Bayaran:** Tunai (dengan baki dan pembundaran 5 sen), Kad, DuitNow QR, e-Wallet, Apps.
 - **Resit:** cetak, salin teks atau simpan sebagai fail .txt.
 - **Pesanan:** sejarah ikut tarikh, batal pesanan.
