@@ -30,6 +30,8 @@ Semua data ada dalam Google Sheet **Jualan Kaunter POS**:
 
 Jangan tukar nama tab atau susunan lajur. Kaunter bergantung padanya.
 
+Perubahan yang dibuat terus dalam sheet muncul di kaunter dalam masa 5 minit. Untuk melihatnya serta-merta, tekan **Tetapan → Segerak sekarang** atau muat semula kaunter.
+
 Lajur **Pilihan** dalam tab Menu ditulis begini: `Ais, 0.30; Kurang manis; Tambah telur, 1.50`. Pilihan dipisahkan dengan `;`, dan harga tambahan (jika ada) diletak selepas koma.
 
 ## Persediaan (sekali sahaja)

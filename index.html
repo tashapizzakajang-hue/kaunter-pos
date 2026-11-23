@@ -806,8 +806,11 @@ function sheetsAdapter(conn) {
     sheetUrl: null, onSync: null, sync,
     start() {
       sync(true);
-      setInterval(() => { if (document.visibilityState === 'visible') sync(); }, 30000);
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+      // Edits made straight in the sheet do not change the script's revision, so re-read everything every 5 minutes
+      // and whenever the counter comes back to the foreground.
+      let polls = 0;
+      setInterval(() => { if (document.visibilityState === 'visible') sync(++polls % 10 === 0); }, 30000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(true); });
     },
     onConfig(cb) { subs.config.add(cb); if (st.config) queueMicrotask(() => cb(st.config)); return () => subs.config.delete(cb); },
     onMenu(cb) { subs.menu.add(cb); if (st.menu) queueMicrotask(() => cb(st.menu, { fromCache: false })); return () => subs.menu.delete(cb); },
@@ -1360,7 +1363,7 @@ function wrapText(s, w) {
   return out.length ? out : [''];
 }
 const LOGO_SRC = 'logo.png';
-const APP_VERSION = '2026-11-23c';
+const APP_VERSION = '2026-11-23d';
 // Remembers a logo that failed to load, so later receipts fall back to the shop name at once.
 const logoState = { failed: false };
 (() => { const im = new Image(); im.onerror = () => { logoState.failed = true; }; im.src = LOGO_SRC; })();
